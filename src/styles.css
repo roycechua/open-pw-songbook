@@ -275,6 +275,85 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.page-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 2.75rem;
+}
+
+.page-nav .page-indicator {
+  margin-left: 0;
+  line-height: 1;
+}
+
+.page-nav__btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.page-nav__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.page-nav__btn--more {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  animation: page-hint-pulse 1.8s ease-in-out infinite;
+}
+
+.page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.page-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  cursor: pointer;
+}
+
+.page-dot.is-active {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+@keyframes page-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* —— Charts —— */
 .charts-strip {
   flex-shrink: 0;
@@ -325,13 +404,19 @@ select {
 }
 
 /* —— Horizontal page snap —— */
+.page-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 .page-scroller {
   flex: 1;
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -341,6 +426,50 @@ select {
   display: none;
 }
 
+.page-edge {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.25rem;
+  z-index: 2;
+  opacity: 0;
+}
+
+.page-edge.is-visible {
+  opacity: 1;
+}
+
+.page-edge--prev {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--bg) 82%, transparent),
+    transparent
+  );
+}
+
+.page-edge--next {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--bg) 88%, transparent),
+    transparent
+  );
+}
+
+.page-edge--next.is-visible::after {
+  content: '›';
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--accent);
+  animation: page-hint-pulse 1.8s ease-in-out infinite;
+}
+
 .song-page {
   flex: 0 0 100%;
   width: 100%;
@@ -348,7 +477,8 @@ select {
   scroll-snap-align: start;
   scroll-snap-stop: always;
   overflow: hidden;
-  padding: 0.75rem;
+  padding: 0.75rem 0.75rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .song-page__inner {
@@ -357,13 +487,55 @@ select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1rem 1.1rem;
+  padding: 0.7rem 1.1rem 2.25rem;
+  box-sizing: border-box;
   box-shadow: var(--shadow);
+}
+
+.song-page--continued .song-page__inner {
+  padding-top: 1.75rem;
 }
 
 .song-sheet {
   font-size: clamp(0.95rem, 2.6vw, 1.05rem);
   line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.song-page__inner--columns {
+  display: flex;
+  flex-direction: column;
+}
+
+.song-sheet--columns {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  column-count: 2;
+  column-gap: 1.75rem;
+  column-rule: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  column-fill: auto;
+}
+
+.song-section {
+  display: block;
+}
+
+.song-sheet--columns .song-section {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.song-sheet--columns .song-line,
+.song-sheet--columns .song-section-label,
+.song-sheet--columns .song-comment {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .song-section-label {
@@ -375,8 +547,13 @@ select {
   color: var(--accent);
 }
 
+.song-section:first-child .song-section-label:first-child,
 .song-section-label:first-child {
   margin-top: 0;
+}
+
+.song-page--continued .song-section:first-child .song-section-label:first-child {
+  margin-top: 0.15rem;
 }
 
 .song-comment {
@@ -395,6 +572,14 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
+  max-width: 100%;
+}
+
+.song-line--chords-only {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
 }
 
 .chord-lyric-pair {
@@ -486,6 +671,11 @@ select {
     box-shadow: none;
     padding: 0;
   }
+
+  .print-full-song .song-sheet--columns {
+    height: auto;
+    column-fill: balance;
+  }
 }
 
 @media (min-width: 768px) {
@@ -498,13 +688,21 @@ select {
   }
 
   .song-page {
-    padding: 1rem 1.25rem 1.25rem;
+    padding: 1rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .song-page__inner {
-    padding: 1.35rem 1.5rem;
+    padding: 0.9rem 1.5rem 2.5rem;
     max-width: 52rem;
     margin: 0 auto;
+  }
+
+  .song-page__inner--columns {
+    max-width: 68rem;
+  }
+
+  .song-page--continued .song-page__inner {
+    padding-top: 2.15rem;
   }
 
   .song-sheet {
