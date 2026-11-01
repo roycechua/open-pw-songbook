@@ -1,4 +1,4 @@
-# Open Songbook
+# Open PW Songbook
 
 Mobile/tablet-first chord sheet viewer (Phase 1 POC).
 

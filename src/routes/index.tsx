@@ -4,7 +4,7 @@ import { listSongs } from '#/lib/songbook'
 export const Route = createFileRoute('/')({
   component: SongIndex,
   head: () => ({
-    meta: [{ title: 'Open Songbook' }],
+    meta: [{ title: 'Open PW Songbook' }],
   }),
 })
 
@@ -14,7 +14,7 @@ function SongIndex() {
   return (
     <main className="song-index">
       <header className="song-index__header">
-        <p className="brand">Open Songbook</p>
+        <p className="brand">Open PW Songbook</p>
         <h1>Songs</h1>
         <p className="lede">
           Chord sheets for mobile and tablet — swipe pages, change key, print.

@@ -1,5 +1,5 @@
 {
-  "projectName": "open-songbook",
+  "projectName": "open-pw-songbook",
   "mode": "file-router",
   "bundler": "vite",
   "typescript": true,

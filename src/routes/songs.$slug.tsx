@@ -14,8 +14,8 @@ export const Route = createFileRoute('/songs/$slug')({
     meta: [
       {
         title: loaderData
-          ? `${loaderData.meta.title} · Open Songbook`
-          : 'Song · Open Songbook',
+          ? `${loaderData.meta.title} · Open PW Songbook`
+          : 'Song · Open PW Songbook',
       },
     ],
   }),
@@ -38,7 +38,7 @@ function SongNotFound() {
   return (
     <main className="song-index">
       <header className="song-index__header">
-        <p className="brand">Open Songbook</p>
+        <p className="brand">Open PW Songbook</p>
         <h1>Song not found</h1>
         <p className="lede">
           That slug is not in the seeded catalog. Pick another from the list.

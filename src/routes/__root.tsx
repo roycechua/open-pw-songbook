@@ -11,7 +11,7 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1, viewport-fit=cover',
       },
-      { title: 'Open Songbook' },
+      { title: 'Open PW Songbook' },
       {
         name: 'description',
         content:
