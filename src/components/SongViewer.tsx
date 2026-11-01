@@ -27,7 +27,11 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
   const [page, setPage] = useState(0)
   const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const scrollingFromUi = useRef(false)
+  const pageRef = useRef(0)
+  const ignoreScrollRef = useRef(false)
+  const ignoreScrollTimer = useRef<number | null>(null)
+
+  pageRef.current = page
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -67,36 +71,84 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
     [transposed.blocks, pageBudget],
   )
 
+  const clearIgnoreScroll = () => {
+    if (ignoreScrollTimer.current != null) {
+      window.clearTimeout(ignoreScrollTimer.current)
+      ignoreScrollTimer.current = null
+    }
+    ignoreScrollRef.current = false
+  }
+
+  const goToPage = (
+    nextPage: number,
+    behavior: ScrollBehavior = 'smooth',
+  ) => {
+    const el = scrollerRef.current
+    const clamped = Math.max(0, Math.min(nextPage, Math.max(0, pages.length - 1)))
+    pageRef.current = clamped
+    setPage(clamped)
+    if (!el) return
+
+    const target = clamped * el.clientWidth
+    if (Math.abs(el.scrollLeft - target) < 1) return
+
+    ignoreScrollRef.current = true
+    if (ignoreScrollTimer.current != null) {
+      window.clearTimeout(ignoreScrollTimer.current)
+    }
+    el.scrollTo({ left: target, behavior })
+
+    const release = () => {
+      // Snap final position without another smooth animation
+      if (Math.abs(el.scrollLeft - target) > 0.5) {
+        el.scrollTo({ left: target, behavior: 'instant' })
+      }
+      clearIgnoreScroll()
+      el.removeEventListener('scrollend', release)
+    }
+    el.addEventListener('scrollend', release, { once: true })
+    ignoreScrollTimer.current = window.setTimeout(
+      release,
+      behavior === 'smooth' ? 450 : 32,
+    )
+  }
+
   useEffect(() => {
-    setPage((p) => Math.min(p, Math.max(0, pages.length - 1)))
+    setPage((p) => {
+      const next = Math.min(p, Math.max(0, pages.length - 1))
+      pageRef.current = next
+      return next
+    })
   }, [pages.length])
+
+  // Only correct scroll when page count/layout changes — never after swipe settle
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const target = pageRef.current * el.clientWidth
+    if (Math.abs(el.scrollLeft - target) <= 1) return
+    ignoreScrollRef.current = true
+    el.scrollTo({ left: target, behavior: 'instant' })
+    ignoreScrollTimer.current = window.setTimeout(clearIgnoreScroll, 32)
+  }, [pages.length, scrollerSize.width])
 
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
     const onScroll = () => {
-      if (scrollingFromUi.current) return
+      if (ignoreScrollRef.current) return
       const w = el.clientWidth || 1
       const next = Math.round(el.scrollLeft / w)
+      if (next === pageRef.current) return
+      pageRef.current = next
       setPage(next)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      clearIgnoreScroll()
+    }
   }, [])
-
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const w = el.clientWidth
-    const target = page * w
-    if (Math.abs(el.scrollLeft - target) < 2) return
-    scrollingFromUi.current = true
-    el.scrollTo({ left: target, behavior: 'smooth' })
-    const t = window.setTimeout(() => {
-      scrollingFromUi.current = false
-    }, 350)
-    return () => window.clearTimeout(t)
-  }, [page, pages.length])
 
   const pageChords = useMemo(() => {
     const block = pages[page] ?? []
@@ -106,6 +158,9 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
   const onPrint = () => {
     window.print()
   }
+
+  const hasPrev = page > 0
+  const hasNext = page < pages.length - 1
 
   return (
     <div className="song-viewer">
@@ -120,47 +175,74 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
         pageCount={pages.length}
         onKeyChange={(k) => {
           setCurrentKey(k)
-          setPage(0)
+          goToPage(0, 'instant')
         }}
         onModeChange={setMode}
         onChartsChange={setCharts}
+        onPageChange={(p) => goToPage(p, 'smooth')}
         onPrint={onPrint}
       />
 
       <ChordChartsStrip chords={pageChords} instrument={charts} />
 
       <div
-        ref={scrollerRef}
-        className="page-scroller"
-        aria-label="Song pages"
+        className={[
+          'page-stage',
+          hasPrev ? 'has-prev' : '',
+          hasNext ? 'has-next' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
-        {pages.map((blocks, i) => (
-          <section
-            key={i}
-            className={
-              i === 0 ? 'song-page' : 'song-page song-page--continued'
-            }
-            aria-label={`Page ${i + 1} of ${pages.length}`}
-          >
-            <div
+        <div
+          ref={scrollerRef}
+          className="page-scroller"
+          aria-label="Song pages"
+        >
+          {pages.map((blocks, i) => (
+            <section
+              key={i}
               className={
-                columns === 2
-                  ? 'song-page__inner print-page song-page__inner--columns'
-                  : 'song-page__inner print-page'
+                i === 0 ? 'song-page' : 'song-page song-page--continued'
               }
+              aria-label={`Page ${i + 1} of ${pages.length}`}
             >
-              {i === 0 && (
-                <div className="print-only print-header">
-                  <h1>{title}</h1>
-                  <p>
-                    {artist} · Key: {currentKey}
-                  </p>
-                </div>
-              )}
-              <SongSheet blocks={blocks} mode={mode} columns={columns} />
-            </div>
-          </section>
-        ))}
+              <div
+                className={
+                  columns === 2
+                    ? 'song-page__inner print-page song-page__inner--columns'
+                    : 'song-page__inner print-page'
+                }
+              >
+                {i === 0 && (
+                  <div className="print-only print-header">
+                    <h1>{title}</h1>
+                    <p>
+                      {artist} · Key: {currentKey}
+                    </p>
+                  </div>
+                )}
+                <SongSheet blocks={blocks} mode={mode} columns={columns} />
+              </div>
+            </section>
+          ))}
+        </div>
+        <div
+          className={
+            hasPrev
+              ? 'page-edge page-edge--prev is-visible'
+              : 'page-edge page-edge--prev'
+          }
+          aria-hidden="true"
+        />
+        <div
+          className={
+            hasNext
+              ? 'page-edge page-edge--next is-visible'
+              : 'page-edge page-edge--next'
+          }
+          aria-hidden="true"
+        />
       </div>
 
       {/* Full song for print (all pages stacked) */}

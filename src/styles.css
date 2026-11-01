@@ -275,6 +275,85 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.page-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 2.75rem;
+}
+
+.page-nav .page-indicator {
+  margin-left: 0;
+  line-height: 1;
+}
+
+.page-nav__btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.page-nav__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.page-nav__btn--more {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  animation: page-hint-pulse 1.8s ease-in-out infinite;
+}
+
+.page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.page-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  cursor: pointer;
+}
+
+.page-dot.is-active {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+@keyframes page-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* —— Charts —— */
 .charts-strip {
   flex-shrink: 0;
@@ -325,13 +404,19 @@ select {
 }
 
 /* —— Horizontal page snap —— */
+.page-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 .page-scroller {
   flex: 1;
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -339,6 +424,50 @@ select {
 
 .page-scroller::-webkit-scrollbar {
   display: none;
+}
+
+.page-edge {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.25rem;
+  z-index: 2;
+  opacity: 0;
+}
+
+.page-edge.is-visible {
+  opacity: 1;
+}
+
+.page-edge--prev {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--bg) 82%, transparent),
+    transparent
+  );
+}
+
+.page-edge--next {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--bg) 88%, transparent),
+    transparent
+  );
+}
+
+.page-edge--next.is-visible::after {
+  content: '›';
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--accent);
+  animation: page-hint-pulse 1.8s ease-in-out infinite;
 }
 
 .song-page {
