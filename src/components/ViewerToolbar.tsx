@@ -13,6 +13,7 @@ type Props = {
   onKeyChange: (key: string) => void
   onModeChange: (mode: ViewMode) => void
   onChartsChange: (charts: ChartInstrument) => void
+  onPageChange: (page: number) => void
   onPrint: () => void
 }
 
@@ -28,8 +29,13 @@ export function ViewerToolbar({
   onKeyChange,
   onModeChange,
   onChartsChange,
+  onPageChange,
   onPrint,
 }: Props) {
+  const hasPrev = page > 0
+  const hasNext = page < pageCount - 1
+  const multiPage = pageCount > 1
+
   return (
     <header className="viewer-toolbar no-print">
       <div className="viewer-toolbar__top">
@@ -93,9 +99,58 @@ export function ViewerToolbar({
           </select>
         </label>
 
-        <div className="page-indicator" aria-live="polite">
-          {page + 1}/{pageCount}
-        </div>
+        {multiPage ? (
+          <div className="page-nav" aria-live="polite">
+            <button
+              type="button"
+              className="page-nav__btn"
+              aria-label="Previous page"
+              disabled={!hasPrev}
+              onClick={() => onPageChange(page - 1)}
+            >
+              ‹
+            </button>
+            <div className="page-nav__status">
+              <span className="page-indicator">
+                {page + 1}/{pageCount}
+              </span>
+              <div
+                className="page-dots"
+                role="tablist"
+                aria-label="Song pages"
+              >
+                {Array.from({ length: pageCount }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    role="tab"
+                    aria-label={`Go to page ${i + 1}`}
+                    aria-selected={i === page}
+                    className={
+                      i === page ? 'page-dot is-active' : 'page-dot'
+                    }
+                    onClick={() => onPageChange(i)}
+                  />
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              className={
+                hasNext ? 'page-nav__btn page-nav__btn--more' : 'page-nav__btn'
+              }
+              aria-label="Next page"
+              disabled={!hasNext}
+              onClick={() => onPageChange(page + 1)}
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          <div className="page-indicator" aria-live="polite">
+            {page + 1}/{pageCount}
+          </div>
+        )}
       </div>
     </header>
   )
