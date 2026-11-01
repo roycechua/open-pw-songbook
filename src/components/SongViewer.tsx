@@ -3,6 +3,7 @@ import {
   collectChords,
   linesPerPageForHeight,
   paginateBlocks,
+  sheetColumnCount,
   transposeParsedSong,
   type ChartInstrument,
   type ParsedSong,
@@ -24,15 +25,20 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
   const [mode, setMode] = useState<ViewMode>('chords')
   const [charts, setCharts] = useState<ChartInstrument>('off')
   const [page, setPage] = useState(0)
-  const [viewportH, setViewportH] = useState(720)
+  const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
   const scrollerRef = useRef<HTMLDivElement>(null)
   const scrollingFromUi = useRef(false)
 
   useEffect(() => {
-    const update = () => setViewportH(window.innerHeight)
+    const el = scrollerRef.current
+    if (!el) return
+    const update = () => {
+      setScrollerSize({ width: el.clientWidth, height: el.clientHeight })
+    }
     update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   const transposed = useMemo(
@@ -40,10 +46,21 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
     [parsed, currentKey],
   )
 
-  const linesPerPage = useMemo(() => {
-    const chartAllowance = charts === 'off' ? 0 : charts === 'both' ? 140 : 100
-    return linesPerPageForHeight(viewportH - chartAllowance)
-  }, [viewportH, charts])
+  const columns = useMemo(
+    () => sheetColumnCount(scrollerSize.width),
+    [scrollerSize.width],
+  )
+
+  const linesPerPage = useMemo(
+    () =>
+      linesPerPageForHeight({
+        scrollerHeightPx: scrollerSize.height,
+        scrollerWidthPx: scrollerSize.width,
+        mode,
+        columns,
+      }),
+    [scrollerSize.height, scrollerSize.width, mode, columns],
+  )
 
   const pages = useMemo(
     () => paginateBlocks(transposed.blocks, linesPerPage),
@@ -120,10 +137,18 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
         {pages.map((blocks, i) => (
           <section
             key={i}
-            className="song-page"
+            className={
+              i === 0 ? 'song-page' : 'song-page song-page--continued'
+            }
             aria-label={`Page ${i + 1} of ${pages.length}`}
           >
-            <div className="song-page__inner print-page">
+            <div
+              className={
+                columns === 2
+                  ? 'song-page__inner print-page song-page__inner--columns'
+                  : 'song-page__inner print-page'
+              }
+            >
               {i === 0 && (
                 <div className="print-only print-header">
                   <h1>{title}</h1>
@@ -132,7 +157,7 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
                   </p>
                 </div>
               )}
-              <SongSheet blocks={blocks} mode={mode} />
+              <SongSheet blocks={blocks} mode={mode} columns={columns} />
             </div>
           </section>
         ))}
@@ -152,7 +177,7 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
             instrument={charts}
           />
         )}
-        <SongSheet blocks={transposed.blocks} mode={mode} />
+        <SongSheet blocks={transposed.blocks} mode={mode} columns={2} />
       </div>
     </div>
   )

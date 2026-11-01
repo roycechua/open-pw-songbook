@@ -26,7 +26,16 @@ export function ChordLine({ line, mode }: Props) {
     lyricsParts.push({ chord: pendingChord, lyric: '' })
   }
 
+  const isChordOnly =
+    chordsOnly.length > 0 &&
+    line.tokens.every(
+      (t) => t.kind === 'chord' || (t.kind === 'lyric' && !t.text.trim()),
+    )
+
   if (mode === 'lyrics') {
+    if (isChordOnly) {
+      return <div className="song-line song-line--lyrics" aria-hidden />
+    }
     const text = line.tokens
       .filter((t) => t.kind === 'lyric')
       .map((t) => (t.kind === 'lyric' ? t.text : ''))
@@ -34,6 +43,18 @@ export function ChordLine({ line, mode }: Props) {
     return (
       <div className="song-line song-line--lyrics">
         <span className="lyric-text">{text || '\u00a0'}</span>
+      </div>
+    )
+  }
+
+  if (isChordOnly) {
+    return (
+      <div className="song-line song-line--chords-only">
+        {chordsOnly.map((chord, i) => (
+          <span key={i} className="chord-text">
+            {chord}
+          </span>
+        ))}
       </div>
     )
   }

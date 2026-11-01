@@ -348,7 +348,8 @@ select {
   scroll-snap-align: start;
   scroll-snap-stop: always;
   overflow: hidden;
-  padding: 0.75rem;
+  padding: 0.75rem 0.75rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .song-page__inner {
@@ -357,13 +358,47 @@ select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1rem 1.1rem;
+  padding: 0.7rem 1.1rem 2.25rem;
+  box-sizing: border-box;
   box-shadow: var(--shadow);
+}
+
+.song-page--continued .song-page__inner {
+  padding-top: 1.75rem;
+}
+
+.song-page--continued .song-section-label:first-child {
+  margin-top: 0.15rem;
 }
 
 .song-sheet {
   font-size: clamp(0.95rem, 2.6vw, 1.05rem);
   line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.song-page__inner--columns {
+  display: flex;
+  flex-direction: column;
+}
+
+.song-sheet--columns {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  column-count: 2;
+  column-gap: 1.75rem;
+  column-rule: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  column-fill: auto;
+}
+
+.song-sheet--columns .song-line,
+.song-sheet--columns .song-section-label,
+.song-sheet--columns .song-comment {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .song-section-label {
@@ -395,6 +430,14 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
+  max-width: 100%;
+}
+
+.song-line--chords-only {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
 }
 
 .chord-lyric-pair {
@@ -486,6 +529,11 @@ select {
     box-shadow: none;
     padding: 0;
   }
+
+  .print-full-song .song-sheet--columns {
+    height: auto;
+    column-fill: balance;
+  }
 }
 
 @media (min-width: 768px) {
@@ -498,13 +546,21 @@ select {
   }
 
   .song-page {
-    padding: 1rem 1.25rem 1.25rem;
+    padding: 1rem 1.25rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .song-page__inner {
-    padding: 1.35rem 1.5rem;
+    padding: 0.9rem 1.5rem 2.5rem;
     max-width: 52rem;
     margin: 0 auto;
+  }
+
+  .song-page__inner--columns {
+    max-width: 68rem;
+  }
+
+  .song-page--continued .song-page__inner {
+    padding-top: 2.15rem;
   }
 
   .song-sheet {

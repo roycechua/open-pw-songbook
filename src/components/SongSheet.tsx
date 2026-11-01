@@ -1,15 +1,26 @@
-import type { ParsedBlock, ViewMode } from '#/lib/songbook'
+import {
+  trimLeadingEmptyBlocks,
+  type ParsedBlock,
+  type ViewMode,
+} from '#/lib/songbook'
 import { ChordLine } from './ChordLine'
 
 type Props = {
   blocks: ParsedBlock[]
   mode: ViewMode
+  columns?: 1 | 2
 }
 
-export function SongSheet({ blocks, mode }: Props) {
+export function SongSheet({ blocks, mode, columns = 1 }: Props) {
+  const visible = trimLeadingEmptyBlocks(blocks)
+
   return (
-    <div className="song-sheet">
-      {blocks.map((block, i) => {
+    <div
+      className={
+        columns === 2 ? 'song-sheet song-sheet--columns' : 'song-sheet'
+      }
+    >
+      {visible.map((block, i) => {
         if (block.kind === 'section') {
           return (
             <div key={i} className="song-section-label">
