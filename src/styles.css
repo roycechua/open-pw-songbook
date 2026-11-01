@@ -367,10 +367,6 @@ select {
   padding-top: 1.75rem;
 }
 
-.song-page--continued .song-section-label:first-child {
-  margin-top: 0.15rem;
-}
-
 .song-sheet {
   font-size: clamp(0.95rem, 2.6vw, 1.05rem);
   line-height: 1.15;
@@ -393,6 +389,18 @@ select {
   column-fill: auto;
 }
 
+.song-section {
+  display: block;
+}
+
+.song-sheet--columns .song-section {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .song-sheet--columns .song-line,
 .song-sheet--columns .song-section-label,
 .song-sheet--columns .song-comment {
@@ -410,8 +418,13 @@ select {
   color: var(--accent);
 }
 
+.song-section:first-child .song-section-label:first-child,
 .song-section-label:first-child {
   margin-top: 0;
+}
+
+.song-page--continued .song-section:first-child .song-section-label:first-child {
+  margin-top: 0.15rem;
 }
 
 .song-comment {

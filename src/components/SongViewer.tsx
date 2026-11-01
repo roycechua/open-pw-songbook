@@ -51,7 +51,7 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
     [scrollerSize.width],
   )
 
-  const linesPerPage = useMemo(
+  const pageBudget = useMemo(
     () =>
       linesPerPageForHeight({
         scrollerHeightPx: scrollerSize.height,
@@ -63,8 +63,8 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
   )
 
   const pages = useMemo(
-    () => paginateBlocks(transposed.blocks, linesPerPage),
-    [transposed.blocks, linesPerPage],
+    () => paginateBlocks(transposed.blocks, pageBudget),
+    [transposed.blocks, pageBudget],
   )
 
   useEffect(() => {
