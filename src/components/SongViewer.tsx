@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  addFavorite,
   collectChords,
   linesPerPageForHeight,
+  listFavorites,
   paginateBlocks,
+  removeFavorite,
   sheetColumnCount,
   transposeParsedSong,
   type ChartInstrument,
   type ParsedSong,
+  type PlaylistFavorite,
+  type SongStatus,
   type ViewMode,
 } from '#/lib/songbook'
+import { createClient } from '#/lib/supabase/client'
 import { ChordChartsStrip } from './ChordChartsStrip'
+import {
+  PlaylistSidebar,
+  useCoarsePointer,
+} from './PlaylistSidebar'
 import { SongSheet } from './SongSheet'
 import { ViewerToolbar } from './ViewerToolbar'
 
@@ -18,9 +28,21 @@ type Props = {
   artist: string
   originalKey: string
   parsed: ParsedSong
+  /** When set with userId, enables favorites sidebar + (if published) star control. */
+  songId?: string
+  songStatus?: SongStatus
+  userId?: string | null
 }
 
-export function SongViewer({ title, artist, originalKey, parsed }: Props) {
+export function SongViewer({
+  title,
+  artist,
+  originalKey,
+  parsed,
+  songId,
+  songStatus,
+  userId = null,
+}: Props) {
   const [currentKey, setCurrentKey] = useState(parsed.key || originalKey)
   const [mode, setMode] = useState<ViewMode>('chords')
   const [charts, setCharts] = useState<ChartInstrument>('off')
@@ -31,7 +53,55 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
   const ignoreScrollRef = useRef(false)
   const ignoreScrollTimer = useRef<number | null>(null)
 
+  const showPlaylist = Boolean(userId && songId)
+  const canFavorite = Boolean(
+    showPlaylist && songStatus === 'published',
+  )
+  const coarsePointer = useCoarsePointer()
+  const [playlistOpen, setPlaylistOpen] = useState(false)
+  const [favorites, setFavorites] = useState<PlaylistFavorite[]>([])
+  const [favoritesLoading, setFavoritesLoading] = useState(showPlaylist)
+  const [favoriteBusy, setFavoriteBusy] = useState(false)
+  const [favoriteError, setFavoriteError] = useState<string | null>(null)
+
+  const isFavorited = Boolean(
+    songId && favorites.some((f) => f.songId === songId),
+  )
+
   pageRef.current = page
+
+  useEffect(() => {
+    if (!userId || !songId) {
+      setFavorites([])
+      setFavoritesLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setFavoritesLoading(true)
+    setFavoriteError(null)
+
+    void (async () => {
+      try {
+        const supabase = createClient()
+        const rows = await listFavorites(supabase, userId)
+        if (!cancelled) setFavorites(rows)
+      } catch (err) {
+        if (!cancelled) {
+          setFavoriteError(
+            err instanceof Error ? err.message : 'Could not load favorites',
+          )
+          setFavorites([])
+        }
+      } finally {
+        if (!cancelled) setFavoritesLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, songId])
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -159,11 +229,55 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
     window.print()
   }
 
+  const onToggleFavorite = async () => {
+    if (!userId || !songId || !canFavorite || favoriteBusy) return
+    setFavoriteBusy(true)
+    setFavoriteError(null)
+    try {
+      const supabase = createClient()
+      if (isFavorited) {
+        const result = await removeFavorite(supabase, userId, songId)
+        if (result.error) {
+          setFavoriteError(result.error.message)
+          return
+        }
+        setFavorites((prev) => prev.filter((f) => f.songId !== songId))
+      } else {
+        const result = await addFavorite(supabase, userId, songId)
+        if (result.error) {
+          setFavoriteError(result.error.message)
+          return
+        }
+        if (result.data) {
+          const added = result.data
+          setFavorites((prev) => [...prev, added])
+        }
+      }
+    } catch (err) {
+      setFavoriteError(
+        err instanceof Error ? err.message : 'Favorite update failed',
+      )
+    } finally {
+      setFavoriteBusy(false)
+    }
+  }
+
   const hasPrev = page > 0
   const hasNext = page < pages.length - 1
 
   return (
     <div className="song-viewer">
+      {showPlaylist && songId ? (
+        <PlaylistSidebar
+          favorites={favorites}
+          currentSongId={songId}
+          open={playlistOpen}
+          onOpenChange={setPlaylistOpen}
+          coarsePointer={coarsePointer}
+          loading={favoritesLoading}
+        />
+      ) : null}
+
       <ViewerToolbar
         title={title}
         artist={artist}
@@ -181,7 +295,26 @@ export function SongViewer({ title, artist, originalKey, parsed }: Props) {
         onChartsChange={setCharts}
         onPageChange={(p) => goToPage(p, 'smooth')}
         onPrint={onPrint}
+        favorites={
+          showPlaylist
+            ? {
+                canFavorite,
+                isFavorited,
+                busy: favoriteBusy,
+                onToggleFavorite: () => void onToggleFavorite(),
+                showPlaylistToggle: coarsePointer,
+                playlistOpen,
+                onTogglePlaylist: () => setPlaylistOpen((v) => !v),
+              }
+            : undefined
+        }
       />
+
+      {favoriteError ? (
+        <p className="playlist-error no-print" role="status">
+          {favoriteError}
+        </p>
+      ) : null}
 
       <ChordChartsStrip chords={pageChords} instrument={charts} />
 

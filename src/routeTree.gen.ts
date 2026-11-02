@@ -10,43 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SongsSlugRouteImport } from './routes/songs.$slug'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as MySongsRouteImport } from './routes/my.songs'
+import { Route as SongsNewRouteImport } from './routes/songs.new'
+import { Route as SongsUsernameSlugRouteImport } from './routes/songs.$username.$slug'
+import { Route as SongsUsernameSlugEditRouteImport } from './routes/songs_.$username.$slug.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SongsSlugRoute = SongsSlugRouteImport.update({
-  id: '/songs/$slug',
-  path: '/songs/$slug',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MySongsRoute = MySongsRouteImport.update({
+  id: '/my/songs',
+  path: '/my/songs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SongsNewRoute = SongsNewRouteImport.update({
+  id: '/songs/new',
+  path: '/songs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SongsUsernameSlugRoute = SongsUsernameSlugRouteImport.update({
+  id: '/songs/$username/$slug',
+  path: '/songs/$username/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SongsUsernameSlugEditRoute = SongsUsernameSlugEditRouteImport.update({
+  id: '/songs_/$username/$slug/edit',
+  path: '/songs/$username/$slug/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/songs/$slug': typeof SongsSlugRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/my/songs': typeof MySongsRoute
+  '/songs/new': typeof SongsNewRoute
+  '/songs/$username/$slug': typeof SongsUsernameSlugRoute
+  '/songs/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/songs/$slug': typeof SongsSlugRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/my/songs': typeof MySongsRoute
+  '/songs/new': typeof SongsNewRoute
+  '/songs/$username/$slug': typeof SongsUsernameSlugRoute
+  '/songs/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/songs/$slug': typeof SongsSlugRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/my/songs': typeof MySongsRoute
+  '/songs/new': typeof SongsNewRoute
+  '/songs/$username/$slug': typeof SongsUsernameSlugRoute
+  '/songs_/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/songs/$slug'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/my/songs'
+    | '/songs/new'
+    | '/songs/$username/$slug'
+    | '/songs/$username/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/songs/$slug'
-  id: '__root__' | '/' | '/songs/$slug'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/my/songs'
+    | '/songs/new'
+    | '/songs/$username/$slug'
+    | '/songs/$username/$slug/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/auth/callback'
+    | '/my/songs'
+    | '/songs/new'
+    | '/songs/$username/$slug'
+    | '/songs_/$username/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SongsSlugRoute: typeof SongsSlugRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  MySongsRoute: typeof MySongsRoute
+  SongsNewRoute: typeof SongsNewRoute
+  SongsUsernameSlugRoute: typeof SongsUsernameSlugRoute
+  SongsUsernameSlugEditRoute: typeof SongsUsernameSlugEditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,11 +169,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/songs/$slug': {
-      id: '/songs/$slug'
-      path: '/songs/$slug'
-      fullPath: '/songs/$slug'
-      preLoaderRoute: typeof SongsSlugRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my/songs': {
+      id: '/my/songs'
+      path: '/my/songs'
+      fullPath: '/my/songs'
+      preLoaderRoute: typeof MySongsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/songs/new': {
+      id: '/songs/new'
+      path: '/songs/new'
+      fullPath: '/songs/new'
+      preLoaderRoute: typeof SongsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/songs/$username/$slug': {
+      id: '/songs/$username/$slug'
+      path: '/songs/$username/$slug'
+      fullPath: '/songs/$username/$slug'
+      preLoaderRoute: typeof SongsUsernameSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/songs_/$username/$slug/edit': {
+      id: '/songs_/$username/$slug/edit'
+      path: '/songs/$username/$slug/edit'
+      fullPath: '/songs/$username/$slug/edit'
+      preLoaderRoute: typeof SongsUsernameSlugEditRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -70,7 +237,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SongsSlugRoute: SongsSlugRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  MySongsRoute: MySongsRoute,
+  SongsNewRoute: SongsNewRoute,
+  SongsUsernameSlugRoute: SongsUsernameSlugRoute,
+  SongsUsernameSlugEditRoute: SongsUsernameSlugEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
