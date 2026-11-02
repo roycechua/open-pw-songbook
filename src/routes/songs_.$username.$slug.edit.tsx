@@ -1,4 +1,5 @@
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { SongEditorSkeleton } from '#/components/loading'
 import { SongEditorForm } from '#/components/SongEditorForm'
 import { APP_NAME } from '#/lib/brand'
 import { loadSongForEdit } from '#/lib/songbook/song-server'
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/songs_/$username/$slug/edit')({
 
     return result
   },
+  pendingComponent: SongEditorSkeleton,
   component: EditSongPage,
   head: ({ loaderData }) => ({
     meta: [

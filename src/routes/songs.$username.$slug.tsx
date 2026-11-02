@@ -1,4 +1,5 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { SongViewerSkeleton } from '#/components/loading'
 import { SongViewer } from '#/components/SongViewer'
 import { APP_NAME } from '#/lib/brand'
 import { loadSongByUsernameSlug } from '#/lib/songbook/song-server'
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/songs/$username/$slug')({
     if (!data) throw notFound()
     return data
   },
+  pendingComponent: SongViewerSkeleton,
   component: SongPage,
   notFoundComponent: SongNotFound,
   head: ({ loaderData }) => ({

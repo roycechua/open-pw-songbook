@@ -1,4 +1,5 @@
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { SongEditorSkeleton } from '#/components/loading'
 import { SongEditorForm } from '#/components/SongEditorForm'
 import { APP_NAME } from '#/lib/brand'
 import { getSessionProfile } from '#/lib/songbook/song-server'
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/songs/new')({
     }
     return { session }
   },
+  pendingComponent: SongEditorSkeleton,
   component: NewSongPage,
   head: () => ({
     meta: [{ title: `New song · ${APP_NAME}` }],

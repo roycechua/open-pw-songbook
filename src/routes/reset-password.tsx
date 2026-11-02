@@ -2,6 +2,7 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { AuthShell } from '#/components/AuthShell'
+import { BusyButton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import { UNVERIFIED_RESET_NOTE, updatePassword } from '#/lib/supabase'
 import { createClient } from '#/lib/supabase/client'
@@ -164,9 +165,14 @@ function ResetPasswordPage() {
           </p>
         ) : null}
 
-        <button type="submit" className="auth-submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Update password'}
-        </button>
+        <BusyButton
+          type="submit"
+          className="auth-submit"
+          busy={busy}
+          busyLabel="Saving…"
+        >
+          Update password
+        </BusyButton>
       </form>
     </AuthShell>
   )

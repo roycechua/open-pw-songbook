@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useId, useState } from 'react'
+import { PlaylistShimmer } from '#/components/loading'
 import type { PlaylistFavorite } from '#/lib/songbook'
 
 type Props = {
@@ -62,7 +63,10 @@ export function PlaylistSidebar({
         </div>
 
         {loading ? (
-          <p className="playlist-sidebar__empty">Loading…</p>
+          <div aria-busy="true" aria-live="polite">
+            <span className="visually-hidden">Loading favorites</span>
+            <PlaylistShimmer rows={5} />
+          </div>
         ) : favorites.length === 0 ? (
           <p className="playlist-sidebar__empty">
             No favorites yet. Add a published song with the star control.

@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
+import { SongListSkeleton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import { loadPublishedSongs } from '#/lib/songbook/song-server'
 import type { SongListItem } from '#/lib/songbook/types'
@@ -9,6 +10,7 @@ export const Route = createFileRoute('/')({
     const songs = await loadPublishedSongs()
     return { songs }
   },
+  pendingComponent: () => <SongListSkeleton variant="catalog" />,
   component: SongIndex,
   head: () => ({
     meta: [{ title: APP_NAME }],

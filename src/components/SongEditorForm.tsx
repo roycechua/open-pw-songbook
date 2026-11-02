@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { BusyButton } from '#/components/loading'
 import {
   COMMON_KEYS,
   createSong,
@@ -169,9 +170,14 @@ export function SongEditorForm({
       </label>
 
       <div className="song-form__actions">
-        <button type="submit" className="toolbar-btn toolbar-btn--primary" disabled={saving}>
-          {saving ? 'Saving…' : mode === 'create' ? 'Create song' : 'Save changes'}
-        </button>
+        <BusyButton
+          type="submit"
+          className="toolbar-btn toolbar-btn--primary"
+          busy={saving}
+          busyLabel="Saving…"
+        >
+          {mode === 'create' ? 'Create song' : 'Save changes'}
+        </BusyButton>
         <button
           type="button"
           className="toolbar-btn"

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Spinner } from '#/components/loading'
 import { COMMON_KEYS, type ChartInstrument, type ViewMode } from '#/lib/songbook'
 
 type FavoriteControls = {
@@ -81,10 +82,11 @@ export function ViewerToolbar({
               type="button"
               className={
                 favorites.isFavorited
-                  ? 'toolbar-btn toolbar-btn--favorite is-active'
-                  : 'toolbar-btn toolbar-btn--favorite'
+                  ? 'toolbar-btn toolbar-btn--favorite is-active busy-button'
+                  : 'toolbar-btn toolbar-btn--favorite busy-button'
               }
               aria-pressed={favorites.isFavorited}
+              aria-busy={favorites.busy || undefined}
               disabled={favorites.busy}
               onClick={favorites.onToggleFavorite}
               title={
@@ -93,7 +95,18 @@ export function ViewerToolbar({
                   : 'Add to favorites'
               }
             >
-              {favorites.isFavorited ? '★ Favorited' : '☆ Favorite'}
+              {favorites.busy ? (
+                <>
+                  <Spinner size="sm" label="" />
+                  <span>
+                    {favorites.isFavorited ? '★ Favorited' : '☆ Favorite'}
+                  </span>
+                </>
+              ) : favorites.isFavorited ? (
+                '★ Favorited'
+              ) : (
+                '☆ Favorite'
+              )}
             </button>
           ) : null}
           <button type="button" className="toolbar-btn" onClick={onPrint}>

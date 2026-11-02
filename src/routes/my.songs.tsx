@@ -1,5 +1,6 @@
 import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
+import { BusyButton, SongListSkeleton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import {
   downloadChordPro,
@@ -17,6 +18,7 @@ export const Route = createFileRoute('/my/songs')({
     }
     return { session: data.session, songs: data.songs }
   },
+  pendingComponent: () => <SongListSkeleton variant="mine" />,
   component: MySongsPage,
   head: () => ({
     meta: [{ title: `My songs · ${APP_NAME}` }],
@@ -26,12 +28,12 @@ export const Route = createFileRoute('/my/songs')({
 function MySongsPage() {
   const { session, songs: initialSongs } = Route.useLoaderData()
   const [songs, setSongs] = useState(initialSongs)
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const onExport = async (song: SongListItem) => {
     setError(null)
-    setBusyId(song.id)
+    setBusyKey(`export:${song.id}`)
     try {
       const supabase = createClient()
       const full = await getSongByUsernameSlug(
@@ -47,7 +49,7 @@ function MySongsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed')
     } finally {
-      setBusyId(null)
+      setBusyKey(null)
     }
   }
 
@@ -56,7 +58,7 @@ function MySongsPage() {
       return
     }
     setError(null)
-    setBusyId(song.id)
+    setBusyKey(`delete:${song.id}`)
     try {
       const supabase = createClient()
       const result = await deleteSong(supabase, song.id)
@@ -68,7 +70,7 @@ function MySongsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
     } finally {
-      setBusyId(null)
+      setBusyKey(null)
     }
   }
 
@@ -137,22 +139,26 @@ function MySongsPage() {
                 >
                   Edit
                 </Link>
-                <button
+                <BusyButton
                   type="button"
                   className="toolbar-btn"
-                  disabled={busyId === song.id}
+                  busy={busyKey === `export:${song.id}`}
+                  busyLabel="Export"
+                  disabled={busyKey?.endsWith(`:${song.id}`) ?? false}
                   onClick={() => void onExport(song)}
                 >
                   Export
-                </button>
-                <button
+                </BusyButton>
+                <BusyButton
                   type="button"
                   className="toolbar-btn"
-                  disabled={busyId === song.id}
+                  busy={busyKey === `delete:${song.id}`}
+                  busyLabel="Delete"
+                  disabled={busyKey?.endsWith(`:${song.id}`) ?? false}
                   onClick={() => void onDelete(song)}
                 >
                   Delete
-                </button>
+                </BusyButton>
               </div>
             </li>
           ))}

@@ -2,6 +2,7 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
 import { AuthShell } from '#/components/AuthShell'
+import { BusyButton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import {
   UNVERIFIED_RESET_NOTE,
@@ -135,9 +136,14 @@ function SignupPage() {
           </p>
         ) : null}
 
-        <button type="submit" className="auth-submit" disabled={busy}>
-          {busy ? 'Creating account…' : 'Create account'}
-        </button>
+        <BusyButton
+          type="submit"
+          className="auth-submit"
+          busy={busy}
+          busyLabel="Creating account…"
+        >
+          Create account
+        </BusyButton>
       </form>
     </AuthShell>
   )

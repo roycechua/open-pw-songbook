@@ -1,6 +1,7 @@
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { BusyButton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import type { AuthSession } from '#/lib/supabase'
 import {
@@ -79,14 +80,15 @@ export function AppNav({ user }: AppNavProps) {
               <Link to="/my/songs" className="app-nav__link">
                 My songs
               </Link>
-              <button
+              <BusyButton
                 type="button"
                 className="app-nav__button"
+                busy={busy}
+                busyLabel="Logging out…"
                 onClick={() => void onLogout()}
-                disabled={busy}
               >
                 Log out
-              </button>
+              </BusyButton>
             </>
           ) : (
             <>
@@ -108,14 +110,15 @@ export function AppNav({ user }: AppNavProps) {
             {UNVERIFIED_RESET_NOTE}
           </p>
           <div className="verify-banner__actions">
-            <button
+            <BusyButton
               type="button"
               className="toolbar-btn"
+              busy={busy}
+              busyLabel="Sending…"
               onClick={() => void onResendVerify()}
-              disabled={busy}
             >
               Resend verification
-            </button>
+            </BusyButton>
             {resendNote ? (
               <span className="verify-banner__note">{resendNote}</span>
             ) : null}

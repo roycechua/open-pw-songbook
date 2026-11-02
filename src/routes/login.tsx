@@ -2,6 +2,7 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
 import { AuthShell } from '#/components/AuthShell'
+import { BusyButton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import { UNVERIFIED_RESET_NOTE, signIn } from '#/lib/supabase'
 import { createClient } from '#/lib/supabase/client'
@@ -88,9 +89,14 @@ function LoginPage() {
           </p>
         ) : null}
 
-        <button type="submit" className="auth-submit" disabled={busy}>
-          {busy ? 'Signing in…' : 'Log in'}
-        </button>
+        <BusyButton
+          type="submit"
+          className="auth-submit"
+          busy={busy}
+          busyLabel="Signing in…"
+        >
+          Log in
+        </BusyButton>
       </form>
     </AuthShell>
   )

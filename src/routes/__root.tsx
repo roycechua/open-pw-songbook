@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from 'react'
 
 import { AppNav } from '#/components/AppNav'
+import { NavigationProgress } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import type { AuthSession } from '#/lib/supabase'
 import { fetchAuthSession } from '#/lib/supabase/session'
@@ -43,6 +44,7 @@ function RootComponent() {
 
   return (
     <>
+      <NavigationProgress />
       <AppNav user={user} />
       <Outlet />
     </>
