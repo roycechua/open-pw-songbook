@@ -9,6 +9,12 @@ const config = defineConfig({
   server: {
     host: true,
     port: 3000,
+    allowedHosts: [
+      'localhost',
+      '.ts.net', // all Tailscale MagicDNS names
+      // or pin one host:
+      // 'rcbeelinkminipc-ubuntu-wsl.tail3575ef.ts.net',
+    ]
   },
   plugins: [tanstackStart(), viteReact()],
 })

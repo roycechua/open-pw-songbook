@@ -1,9 +1,23 @@
-import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { AppNav } from '#/components/AppNav'
+import { NavigationProgress } from '#/components/loading'
+import { APP_NAME } from '#/lib/brand'
+import type { AuthSession } from '#/lib/supabase'
+import { fetchAuthSession } from '#/lib/supabase/session'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
+  beforeLoad: async (): Promise<{ user: AuthSession | null }> => {
+    const user = await fetchAuthSession()
+    return { user }
+  },
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -11,7 +25,7 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1, viewport-fit=cover',
       },
-      { title: 'Open PW Songbook' },
+      { title: APP_NAME },
       {
         name: 'description',
         content:
@@ -26,7 +40,15 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  return <Outlet />
+  const { user } = Route.useRouteContext()
+
+  return (
+    <>
+      <NavigationProgress />
+      <AppNav user={user} />
+      <Outlet />
+    </>
+  )
 }
 
 function RootDocument({ children }: { children: ReactNode }) {

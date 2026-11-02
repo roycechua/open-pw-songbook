@@ -1,5 +1,18 @@
 import { Link } from '@tanstack/react-router'
+import { Spinner } from '#/components/loading'
 import { COMMON_KEYS, type ChartInstrument, type ViewMode } from '#/lib/songbook'
+
+type FavoriteControls = {
+  /** Show add/remove only for published songs when logged in. */
+  canFavorite: boolean
+  isFavorited: boolean
+  busy: boolean
+  onToggleFavorite: () => void
+  /** Touch / coarse: explicit favorites panel toggle. */
+  showPlaylistToggle: boolean
+  playlistOpen: boolean
+  onTogglePlaylist: () => void
+}
 
 type Props = {
   title: string
@@ -15,6 +28,7 @@ type Props = {
   onChartsChange: (charts: ChartInstrument) => void
   onPageChange: (page: number) => void
   onPrint: () => void
+  favorites?: FavoriteControls
 }
 
 export function ViewerToolbar({
@@ -31,6 +45,7 @@ export function ViewerToolbar({
   onChartsChange,
   onPageChange,
   onPrint,
+  favorites,
 }: Props) {
   const hasPrev = page > 0
   const hasNext = page < pageCount - 1
@@ -46,9 +61,58 @@ export function ViewerToolbar({
           <h1 className="viewer-title">{title}</h1>
           <p className="viewer-artist">{artist}</p>
         </div>
-        <button type="button" className="toolbar-btn" onClick={onPrint}>
-          Print
-        </button>
+        <div className="viewer-toolbar__actions">
+          {favorites?.showPlaylistToggle ? (
+            <button
+              type="button"
+              className={
+                favorites.playlistOpen
+                  ? 'toolbar-btn is-active'
+                  : 'toolbar-btn'
+              }
+              aria-expanded={favorites.playlistOpen}
+              aria-controls="playlist-sidebar-panel"
+              onClick={favorites.onTogglePlaylist}
+            >
+              Favorites
+            </button>
+          ) : null}
+          {favorites?.canFavorite ? (
+            <button
+              type="button"
+              className={
+                favorites.isFavorited
+                  ? 'toolbar-btn toolbar-btn--favorite is-active busy-button'
+                  : 'toolbar-btn toolbar-btn--favorite busy-button'
+              }
+              aria-pressed={favorites.isFavorited}
+              aria-busy={favorites.busy || undefined}
+              disabled={favorites.busy}
+              onClick={favorites.onToggleFavorite}
+              title={
+                favorites.isFavorited
+                  ? 'Remove from favorites'
+                  : 'Add to favorites'
+              }
+            >
+              {favorites.busy ? (
+                <>
+                  <Spinner size="sm" label="" />
+                  <span>
+                    {favorites.isFavorited ? '★ Favorited' : '☆ Favorite'}
+                  </span>
+                </>
+              ) : favorites.isFavorited ? (
+                '★ Favorited'
+              ) : (
+                '☆ Favorite'
+              )}
+            </button>
+          ) : null}
+          <button type="button" className="toolbar-btn" onClick={onPrint}>
+            Print
+          </button>
+        </div>
       </div>
 
       <div className="viewer-toolbar__controls">

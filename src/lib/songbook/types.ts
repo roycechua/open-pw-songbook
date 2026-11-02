@@ -17,11 +17,22 @@ export type NoteName =
   | 'Bb'
   | 'B'
 
-export type SongMeta = {
+export type SongStatus = 'draft' | 'published'
+
+/** Catalog / list row (no ChordPro body). */
+export type SongListItem = {
+  id: string
+  ownerId: string
+  username: string
   slug: string
   title: string
   artist: string
   originalKey: string
+  status: SongStatus
+}
+
+/** Full song including ChordPro source. */
+export type SongMeta = SongListItem & {
   chordPro: string
 }
 
