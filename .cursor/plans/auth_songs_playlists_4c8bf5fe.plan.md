@@ -4,28 +4,28 @@ overview: "Phase 2: add Supabase auth (username + email + password; optional ema
 todos:
   - id: supabase-setup
     content: Add Supabase clients, .env.example (required fields), migrations for profiles (username+email)/songs/playlist_items + RLS; auth with confirm-email not required to sign in
-    status: pending
+    status: completed
   - id: auth-routes
     content: Build signup/login/logout, optional verify-email, forgot/reset password (verified only), UX note if unverified, session-aware nav
-    status: pending
+    status: completed
   - id: songs-crud
     content: Replace seed data layer; routes for public /songs/$username/$slug, /songs/new, /my/songs, edit; draft vs published RLS
-    status: pending
+    status: completed
   - id: home-search
     content: Home published list with text search and A–Z letter filter
-    status: pending
+    status: completed
   - id: playlist-sidebar
     content: Favorites playlist CRUD + hover/toggle sidebar on song viewer for quick switch
-    status: pending
+    status: completed
   - id: export-sample
     content: ChordPro export download; samples/*.chordpro reference file; README env + empty-DB notes
-    status: pending
+    status: completed
 isProject: true
 ---
 
 # Phase 2: Auth, songs CRUD, playlist
 
-Continues from [Chord viewer POC](chord_viewer_poc_5dd46de0.plan.md). Keep the existing ChordPro parse/transpose/viewer UI; replace in-memory [`src/lib/songbook/songs.ts`](../../src/lib/songbook/songs.ts) with Supabase-backed data. Seeded songs are **not** loaded into the DB; keep a sample ChordPro file in-repo for reference (and future manual seed scripts).
+Continues from [Chord viewer POC](.cursor/plans/chord_viewer_poc_5dd46de0.plan.md). Keep the existing ChordPro parse/transpose/viewer UI; replace in-memory [`src/lib/songbook/songs.ts`](src/lib/songbook/songs.ts) with Supabase-backed data. Seeded songs are **not** loaded into the DB; keep a sample ChordPro file in-repo for reference (and future manual seed scripts).
 
 ## Locked decisions
 
@@ -121,7 +121,7 @@ SQL migrations in `supabase/migrations/`. Optional later: `scripts/seed-from-cho
 
 ## Sample reference file
 
-- Add e.g. [`samples/adonai.chordpro`](../../samples/adonai.chordpro) (or `.cho`) with the format [`parseChordPro`](../../src/lib/songbook/parse.ts) already understands
+- Add e.g. [`samples/adonai.chordpro`](samples/adonai.chordpro) (or `.cho`) with the format [`parseChordPro`](src/lib/songbook/parse.ts) already understands
 - Remove runtime dependency on in-repo `SONGS` array; index starts empty until users publish
 - Keep a short note in README pointing at the sample + env vars
 
@@ -136,7 +136,7 @@ SQL migrations in `supabase/migrations/`. Optional later: `scripts/seed-from-cho
 | `/songs/new`, `/my/songs`, `/songs/$username/$slug/edit` | auth (owner for edit) | Create/edit ChordPro body + meta + draft/published; export |
 | Logout | auth | Clear session |
 
-Replace [`src/routes/songs.$slug.tsx`](../../src/routes/songs.$slug.tsx) with `songs.$username.$slug.tsx`. Wire loaders to Supabase instead of `getParsedSong` from seeds.
+Replace [`src/routes/songs.$slug.tsx`](src/routes/songs.$slug.tsx) with `songs.$username.$slug.tsx`. Wire loaders to Supabase instead of `getParsedSong` from seeds.
 
 **Editor:** textarea for ChordPro + fields for title/artist/key/slug/status; live parse preview optional if cheap; validate with existing parser before save.
 
@@ -148,7 +148,7 @@ Replace [`src/routes/songs.$slug.tsx`](../../src/routes/songs.$slug.tsx) with `s
 
 ## Data layer changes
 
-- Replace [`listSongs` / `getParsedSong`](../../src/lib/songbook/songs.ts) with async Supabase queries (`listPublishedSongs`, `getSongByUsernameSlug`, owner CRUD, playlist helpers)
+- Replace [`listSongs` / `getParsedSong`](src/lib/songbook/songs.ts) with async Supabase queries (`listPublishedSongs`, `getSongByUsernameSlug`, owner CRUD, playlist helpers)
 - Extend list types with `username`, `status`, `id` as needed; keep parsing/transpose/paginate untouched
 - Home search: client filter on loaded published list for POC scale (title/artist/username); A–Z chips filter by title’s first letter (`#` for non A–Z)
 

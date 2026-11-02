@@ -15,7 +15,7 @@ export const Route = createFileRoute('/songs/new')({
   pendingComponent: SongEditorSkeleton,
   component: NewSongPage,
   head: () => ({
-    meta: [{ title: `New song · ${APP_NAME}` }],
+    meta: [{ title: `Add New Song · ${APP_NAME}` }],
   }),
 })
 
@@ -26,9 +26,10 @@ function NewSongPage() {
   return (
     <main className="song-index">
       <header className="song-index__header">
-        <h1>New song</h1>
+        <h1>Add New Song</h1>
         <p className="lede">
-          Paste ChordPro, set metadata, then save as draft or publish.
+          Import a .chordpro export, or paste ChordPro, then save as draft or
+          publish.
         </p>
         <p className="song-index__nav">
           <Link to="/my/songs" className="back-link">

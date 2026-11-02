@@ -227,6 +227,119 @@ select {
   gap: 0.45rem;
 }
 
+.song-list__card {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.song-list__card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.song-list__card--skeleton {
+  pointer-events: none;
+}
+
+.song-list__card--skeleton:hover {
+  border-color: var(--border);
+  transform: none;
+}
+
+.song-list__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.9rem 0.75rem 0.9rem 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.song-list__main:hover {
+  text-decoration: none;
+}
+
+.song-list__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+
+.song-list__icon-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.55rem;
+  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 45%, var(--surface));
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2.6rem;
+  height: 2.6rem;
+  min-width: 2.6rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.icon-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  text-decoration: none;
+}
+
+.icon-btn--edit:hover {
+  color: #9a6b00;
+  background: color-mix(in srgb, #e6b800 14%, var(--surface));
+  border-color: color-mix(in srgb, #e6b800 40%, transparent);
+}
+
+.icon-btn--danger:hover {
+  color: #8a1f16;
+  background: color-mix(in srgb, #b42318 10%, var(--surface));
+  border-color: color-mix(in srgb, #b42318 30%, transparent);
+}
+
+.icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.skeleton--icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
 .song-list__actions {
   display: flex;
   flex-wrap: wrap;
@@ -235,7 +348,6 @@ select {
 }
 
 .song-status {
-  margin-left: 0.5rem;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -299,6 +411,124 @@ select {
   line-height: 1.45;
   resize: vertical;
   min-height: 18rem;
+}
+
+.chordpro-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.chordpro-workspace__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.chordpro-workspace__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-right: 0.25rem;
+}
+
+.chordpro-workspace__snippets,
+.chordpro-workspace__panes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.chordpro-workspace__panes {
+  margin-left: auto;
+}
+
+.chordpro-workspace__body {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 22rem;
+}
+
+.chordpro-workspace__body--split {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 52rem) {
+  .chordpro-workspace__body--split {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+}
+
+.chordpro-workspace__source,
+.chordpro-workspace__preview {
+  min-height: 20rem;
+  max-height: min(70vh, 36rem);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.chordpro-editor {
+  height: 100%;
+  min-height: 20rem;
+}
+
+.chordpro-editor .cm-editor {
+  height: 100%;
+  background: transparent;
+}
+
+.chordpro-editor .cm-chordpro-directive {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chordpro-editor .cm-chordpro-chord {
+  color: var(--chord);
+  font-weight: 600;
+}
+
+.chordpro-editor .cm-chordpro-comment {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.chordpro-preview {
+  padding: 0.85rem 1rem 1.25rem;
+}
+
+.chordpro-preview--empty,
+.chordpro-preview__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.chordpro-preview__hint code {
+  font-family: var(--font-chord);
+  font-size: 0.85em;
+}
+
+.chordpro-preview__meta {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.chordpro-preview__title {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+}
+
+.chordpro-preview__sub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
 }
 
 .song-form__actions {
@@ -1415,6 +1645,15 @@ select {
   justify-content: center;
   gap: 0.45rem;
   min-width: 6.5rem;
+}
+
+.busy-button.busy-button--icon,
+.busy-button.icon-btn {
+  gap: 0;
+  min-width: 2.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
 }
 
 .skeleton {

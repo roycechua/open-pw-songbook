@@ -75,7 +75,7 @@ function SongIndex() {
                 My songs
               </Link>
               <Link to="/songs/new" className="back-link">
-                New song
+                Add New Song
               </Link>
             </>
           ) : (
