@@ -165,3 +165,112 @@ export function lineHasContent(line: SongLine): boolean {
     t.kind === 'chord' ? true : t.text.trim().length > 0,
   )
 }
+
+const META_ALIASES = {
+  title: ['title', 't'],
+  artist: ['artist', 'subtitle', 'st'],
+  key: ['key', 'k'],
+} as const
+
+const TITLE_ALIASES = new Set<string>(META_ALIASES.title)
+const ARTIST_ALIASES = new Set<string>(META_ALIASES.artist)
+const KEY_ALIASES = new Set<string>(META_ALIASES.key)
+
+export type ChordProMetaFields = {
+  title?: string
+  artist?: string
+  key?: string
+}
+
+export type ChordProMetaRead = {
+  /** Present when a complete `{title}` / `{t}` directive exists (value may be ""). */
+  title?: string
+  /** Present when a complete artist/subtitle directive exists. */
+  artist?: string
+  /** Present when a complete `{key}` / `{k}` directive exists. */
+  key?: string
+}
+
+/**
+ * Read meta directives without treating “missing” the same as “empty”.
+ * Incomplete lines like `{title: Foo` (no closing `}`) are ignored so live
+ * editing does not clear the form mid-keystroke.
+ */
+export function readChordProMeta(source: string): ChordProMetaRead {
+  const meta: ChordProMetaRead = {}
+  const lines = source.replace(/\r\n/g, '\n').split('\n')
+
+  for (const rawLine of lines) {
+    const match = rawLine.trim().match(DIRECTIVE_RE)
+    if (!match) continue
+    const name = match[1]!.trim().toLowerCase()
+    const value = match[2]?.trim() ?? ''
+
+    if (TITLE_ALIASES.has(name)) meta.title = value
+    else if (ARTIST_ALIASES.has(name)) meta.artist = value
+    else if (KEY_ALIASES.has(name)) meta.key = value
+  }
+
+  return meta
+}
+
+/**
+ * Update or insert a ChordPro meta directive, preserving the existing
+ * directive name/alias and indentation when present.
+ */
+export function upsertChordProDirective(
+  source: string,
+  aliases: readonly string[],
+  primaryName: string,
+  value: string,
+): string {
+  const normalized = source.replace(/\r\n/g, '\n')
+  const lines = normalized.split('\n')
+  const aliasSet = new Set(aliases.map((name) => name.toLowerCase()))
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!
+    const trimmed = line.trim()
+    const match = trimmed.match(DIRECTIVE_RE)
+    if (!match) continue
+
+    const name = match[1]!.trim()
+    if (!aliasSet.has(name.toLowerCase())) continue
+
+    const indent = line.match(/^\s*/)?.[0] ?? ''
+    lines[i] = `${indent}{${name}: ${value}}`
+    return lines.join('\n')
+  }
+
+  const directive = `{${primaryName}: ${value}}`
+  if (!normalized.trim()) return `${directive}\n`
+  return `${directive}\n${normalized.replace(/^\n+/, '')}`
+}
+
+/** Keep `{title}` / `{artist}` / `{key}` in sync with form metadata. */
+export function upsertChordProMeta(
+  source: string,
+  meta: ChordProMetaFields,
+): string {
+  let next = source
+  if (meta.title !== undefined) {
+    next = upsertChordProDirective(
+      next,
+      META_ALIASES.title,
+      'title',
+      meta.title,
+    )
+  }
+  if (meta.artist !== undefined) {
+    next = upsertChordProDirective(
+      next,
+      META_ALIASES.artist,
+      'artist',
+      meta.artist,
+    )
+  }
+  if (meta.key !== undefined) {
+    next = upsertChordProDirective(next, META_ALIASES.key, 'key', meta.key)
+  }
+  return next
+}

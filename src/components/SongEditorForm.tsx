@@ -1,12 +1,20 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react'
 import { BusyButton } from '#/components/loading'
 import {
   COMMON_KEYS,
   createSong,
   downloadChordPro,
   parseChordPro,
+  readChordProMeta,
   slugifyTitle,
   updateSong,
+  upsertChordProMeta,
   type SongMeta,
   type SongStatus,
   type SongWriteInput,
@@ -49,6 +57,15 @@ const SNIPPET_BUTTONS: { id: SnippetId; label: string }[] = [
   { id: 'chord', label: '[C]' },
 ]
 
+function seedChordProFromForm(source: string, meta: SongEditorInitial): string {
+  const parsed = parseChordPro(source)
+  return upsertChordProMeta(source, {
+    title: parsed.title || meta.title,
+    artist: parsed.artist || meta.artist,
+    key: parsed.key || meta.originalKey || 'C',
+  })
+}
+
 export function SongEditorForm({
   mode,
   ownerId,
@@ -60,20 +77,71 @@ export function SongEditorForm({
   const [artist, setArtist] = useState(initial.artist)
   const [originalKey, setOriginalKey] = useState(initial.originalKey || 'C')
   const [slug, setSlug] = useState(initial.slug)
-  const [slugTouched, setSlugTouched] = useState(mode === 'edit')
-  const [chordPro, setChordPro] = useState(initial.chordPro)
+  const [chordPro, setChordPro] = useState(() =>
+    seedChordProFromForm(initial.chordPro, initial),
+  )
   const [status, setStatus] = useState<SongStatus>(initial.status)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [pane, setPane] = useState<PaneMode>('split')
   const editorRef = useRef<ChordProEditorHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const slugTouchedRef = useRef(mode === 'edit')
+  // Prevent form→ChordPro writes from bouncing back through the parser.
+  const metaSyncFromFormRef = useRef(false)
 
-  const onTitleChange = (value: string) => {
-    setTitle(value)
-    if (!slugTouched) {
-      setSlug(slugifyTitle(value))
+  const syncFormFromChordPro = (source: string, fileName?: string) => {
+    const meta = readChordProMeta(source)
+
+    if (meta.title !== undefined) {
+      setTitle(meta.title)
+      if (meta.title && !slugTouchedRef.current) {
+        setSlug(slugifyTitle(meta.title))
+      }
+    } else if (fileName && mode === 'create' && !slugTouchedRef.current) {
+      const base = fileName.replace(CHORDPRO_FILE_EXT, '').trim()
+      const fromFile = slugifyTitle(base)
+      if (fromFile) {
+        const fallbackTitle = base.replace(/[-_]+/g, ' ').trim()
+        setTitle(fallbackTitle)
+        setSlug(fromFile)
+        metaSyncFromFormRef.current = true
+        setChordPro(upsertChordProMeta(source, { title: fallbackTitle }))
+      }
     }
+
+    if (meta.artist !== undefined) setArtist(meta.artist)
+    if (meta.key) setOriginalKey(meta.key)
+  }
+
+  useEffect(() => {
+    if (metaSyncFromFormRef.current) {
+      metaSyncFromFormRef.current = false
+      return
+    }
+    syncFormFromChordPro(chordPro)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ChordPro is the meta source of truth
+  }, [chordPro])
+
+  const updateMetaField = (
+    field: 'title' | 'artist' | 'key',
+    value: string,
+  ) => {
+    if (field === 'title') {
+      setTitle(value)
+      if (!slugTouchedRef.current) setSlug(slugifyTitle(value))
+    } else if (field === 'artist') {
+      setArtist(value)
+    } else {
+      setOriginalKey(value)
+    }
+
+    metaSyncFromFormRef.current = true
+    setChordPro((prev) =>
+      upsertChordProMeta(prev, {
+        [field]: value,
+      }),
+    )
   }
 
   const applyImportedChordPro = (source: string, fileName: string) => {
@@ -83,26 +151,9 @@ export function SongEditorForm({
       return
     }
 
-    const parsed = parseChordPro(text)
-    setChordPro(text)
     setError(null)
-
-    if (parsed.title) {
-      setTitle(parsed.title)
-      if (mode === 'create' && !slugTouched) {
-        setSlug(slugifyTitle(parsed.title))
-      }
-    } else if (mode === 'create' && !slugTouched) {
-      const base = fileName.replace(CHORDPRO_FILE_EXT, '').trim()
-      const fromFile = slugifyTitle(base)
-      if (fromFile) {
-        setSlug(fromFile)
-        setTitle(base.replace(/[-_]+/g, ' ').trim())
-      }
-    }
-
-    if (parsed.artist) setArtist(parsed.artist)
-    if (parsed.key) setOriginalKey(parsed.key)
+    setChordPro(text)
+    syncFormFromChordPro(text, fileName)
     if (pane === 'preview') setPane('split')
   }
 
@@ -176,7 +227,7 @@ export function SongEditorForm({
           <span>Title</span>
           <input
             value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
+            onChange={(e) => updateMetaField('title', e.target.value)}
             required
             autoComplete="off"
           />
@@ -186,7 +237,7 @@ export function SongEditorForm({
           <span>Artist</span>
           <input
             value={artist}
-            onChange={(e) => setArtist(e.target.value)}
+            onChange={(e) => updateMetaField('artist', e.target.value)}
             autoComplete="off"
           />
         </label>
@@ -195,7 +246,7 @@ export function SongEditorForm({
           <span>Key</span>
           <select
             value={originalKey}
-            onChange={(e) => setOriginalKey(e.target.value)}
+            onChange={(e) => updateMetaField('key', e.target.value)}
             aria-label="Original key"
           >
             {(COMMON_KEYS as readonly string[]).includes(originalKey) ? null : (
@@ -214,7 +265,7 @@ export function SongEditorForm({
           <input
             value={slug}
             onChange={(e) => {
-              setSlugTouched(true)
+              slugTouchedRef.current = true
               setSlug(e.target.value.trim().toLowerCase())
             }}
             required

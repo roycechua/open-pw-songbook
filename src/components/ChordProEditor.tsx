@@ -123,15 +123,32 @@ export const ChordProEditor = forwardRef<ChordProEditorHandle, Props>(
       const view = viewRef.current
       if (!view) return
       const current = view.state.doc.toString()
-      if (current !== value) {
-        view.dispatch({
-          changes: {
-            from: 0,
-            to: current.length,
-            insert: value,
-          },
-        })
+      if (current === value) return
+
+      // Replace only the changed span so cursor/scroll map cleanly when
+      // form fields update `{title}` / `{artist}` / `{key}` at the top.
+      let start = 0
+      const minLen = Math.min(current.length, value.length)
+      while (start < minLen && current[start] === value[start]) start++
+
+      let endOld = current.length
+      let endNew = value.length
+      while (
+        endOld > start &&
+        endNew > start &&
+        current[endOld - 1] === value[endNew - 1]
+      ) {
+        endOld--
+        endNew--
       }
+
+      view.dispatch({
+        changes: {
+          from: start,
+          to: endOld,
+          insert: value.slice(start, endNew),
+        },
+      })
     }, [value])
 
     return (
