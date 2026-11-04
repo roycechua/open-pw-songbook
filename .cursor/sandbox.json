@@ -1,0 +1,13 @@
+{
+  "networkPolicy": {
+    "default": "deny",
+    "allow": [
+      "api.github.com",
+      "uploads.github.com",
+      "github.com",
+      "api.netlify.com",
+      "app.netlify.com",
+      "*.netlify.app"
+    ]
+  }
+}
