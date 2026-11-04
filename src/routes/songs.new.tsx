@@ -28,8 +28,9 @@ function NewSongPage() {
       <header className="song-index__header">
         <h1>Add New Song</h1>
         <p className="lede">
-          Import a .chordpro export, or paste ChordPro, then save as draft or
-          publish.
+          Import a .chordpro export, or paste ChordPro. Title, artist, and key
+          stay in sync with the ChordPro directives either way. Then save as
+          draft or publish.
         </p>
         <p className="song-index__nav">
           <Link to="/my/songs" className="back-link">
