@@ -91,8 +91,9 @@ export function ViewerToolbar({
   return (
     <header className="viewer-toolbar no-print">
       <div className="viewer-toolbar__top">
-        <Link to="/" className="back-link">
-          Songs
+        <Link to="/" className="viewer-back" aria-label="Back to songs">
+          <span aria-hidden="true">‹</span>
+          <span className="viewer-back__label">Songs</span>
         </Link>
         <div className="viewer-toolbar__titles">
           <h1 className="viewer-title">{title}</h1>
@@ -146,7 +147,11 @@ export function ViewerToolbar({
               )}
             </button>
           ) : null}
-          <button type="button" className="toolbar-btn" onClick={onPrint}>
+          <button
+            type="button"
+            className="toolbar-btn toolbar-btn--print"
+            onClick={onPrint}
+          >
             Print
           </button>
         </div>

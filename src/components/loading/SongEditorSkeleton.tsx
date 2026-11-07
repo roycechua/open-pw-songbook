@@ -3,30 +3,25 @@ import { SkeletonBlock } from './SkeletonBlock'
 export function SongEditorSkeleton() {
   return (
     <main
-      className="song-index song-index--pending"
+      className="editor editor--pending"
       aria-busy="true"
       aria-live="polite"
     >
       <span className="visually-hidden">Loading editor</span>
-      <header className="song-index__header" aria-hidden="true">
-        <SkeletonBlock className="skeleton--heading" />
-        <SkeletonBlock className="skeleton--text skeleton--lede" />
-        <div className="song-index__nav">
-          <SkeletonBlock className="skeleton--chip" />
-          <SkeletonBlock className="skeleton--chip" />
+      <header className="editor__header" aria-hidden="true">
+        <SkeletonBlock className="skeleton--icon" />
+        <div className="editor__heading">
+          <SkeletonBlock className="skeleton--heading" />
         </div>
       </header>
-      <div className="song-form song-form--skeleton" aria-hidden="true">
-        <div className="song-form__grid">
-          <SkeletonBlock className="skeleton--field" />
-          <SkeletonBlock className="skeleton--field" />
-          <SkeletonBlock className="skeleton--field" />
-          <SkeletonBlock className="skeleton--field" />
+      <div className="editor__form" aria-hidden="true">
+        <SkeletonBlock className="skeleton--field" />
+        <div className="editor__workspace">
+          <SkeletonBlock className="skeleton--textarea" />
         </div>
-        <SkeletonBlock className="skeleton--textarea" />
-        <div className="song-form__actions">
+        <div className="editor__dock editor__dock--skeleton">
           <SkeletonBlock className="skeleton--chip skeleton--chip-wide" />
-          <SkeletonBlock className="skeleton--chip" />
+          <SkeletonBlock className="skeleton--chip skeleton--chip-wide" />
         </div>
       </div>
     </main>

@@ -134,20 +134,20 @@ function MySongsPage() {
   }
 
   return (
-    <main className="song-index">
+    <main className="song-index song-index--mine">
       <header className="song-index__header">
-        <h1>My songs</h1>
-        <p className="lede">
-          Drafts and published songs for @{session.username}.
-        </p>
-        <p className="song-index__nav">
-          <Link to="/songs/new" className="back-link">
-            Add New Song
+        <div className="song-index__heading">
+          <h1>My songs</h1>
+          <p className="lede">
+            Drafts and published songs for @{session.username}. Publish or
+            unpublish from each song below.
+          </p>
+        </div>
+        <div className="song-index__actions">
+          <Link to="/songs/new" className="btn btn--primary">
+            Add new song
           </Link>
-          <Link to="/" className="back-link">
-            Catalog
-          </Link>
-        </p>
+        </div>
       </header>
 
       {error ? (

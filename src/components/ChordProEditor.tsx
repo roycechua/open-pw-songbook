@@ -72,7 +72,7 @@ export const ChordProEditor = forwardRef<ChordProEditorHandle, Props>(
           EditorView.theme({
             '&': {
               height: '100%',
-              fontSize: '0.95rem',
+              fontSize: '1rem',
             },
             '.cm-scroller': {
               fontFamily: 'var(--font-chord), ui-monospace, monospace',
