@@ -2,13 +2,18 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { SongViewerSkeleton } from '#/components/loading'
 import { SongViewer } from '#/components/SongViewer'
 import { APP_NAME } from '#/lib/brand'
+import { loadSongClient } from '#/lib/songbook/song-client'
 import { loadSongByUsernameSlug } from '#/lib/songbook/song-server'
 
 export const Route = createFileRoute('/songs/$username/$slug')({
   loader: async ({ params }) => {
-    const data = await loadSongByUsernameSlug({
-      data: { username: params.username, slug: params.slug },
-    })
+    // SSR / first load: server function. Client navigations: direct to Supabase.
+    const data =
+      typeof window === 'undefined'
+        ? await loadSongByUsernameSlug({
+            data: { username: params.username, slug: params.slug },
+          })
+        : await loadSongClient(params.username, params.slug)
     if (!data) throw notFound()
     return data
   },

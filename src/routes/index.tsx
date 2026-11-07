@@ -2,12 +2,17 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { SongListSkeleton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
+import { loadPublishedSongsClient } from '#/lib/songbook/song-client'
 import { loadPublishedSongs } from '#/lib/songbook/song-server'
 import type { SongListItem } from '#/lib/songbook/types'
 
 export const Route = createFileRoute('/')({
   loader: async () => {
-    const songs = await loadPublishedSongs()
+    // SSR / first load: server function. Client navigations: direct to Supabase.
+    const songs =
+      typeof window === 'undefined'
+        ? await loadPublishedSongs()
+        : await loadPublishedSongsClient()
     return { songs }
   },
   pendingComponent: () => <SongListSkeleton variant="catalog" />,

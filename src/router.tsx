@@ -8,7 +8,9 @@ export function getRouter() {
     routeTree,
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    // Supabase is far from the server region; reuse preloaded/visited data.
+    defaultPreloadStaleTime: 30_000,
+    defaultStaleTime: 30_000,
     defaultPendingMs: 150,
     defaultPendingComponent: RoutePending,
   })
