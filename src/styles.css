@@ -897,14 +897,15 @@ input {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.4rem 0.5rem;
+  gap: 0.1rem;
+  padding: 0.4rem 0.4rem;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
 
 .song-list__publish {
   margin-left: auto;
+  padding: 0 0.45rem;
 }
 
 .song-list__actions {
@@ -943,8 +944,8 @@ input {
   width: auto;
   min-width: 0;
   height: 2.5rem;
-  padding: 0 0.7rem 0 0.55rem;
-  gap: 0.4rem;
+  padding: 0 0.55rem 0 0.45rem;
+  gap: 0.35rem;
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -1126,15 +1127,33 @@ input {
 
 .editor__details-body > .song-form__field:first-child,
 .editor__details-body > .song-form__field:nth-child(2),
-.editor__colors {
+.editor__colors,
+.editor__details-body > .editor__file-actions {
   grid-column: 1 / -1;
 }
 
 .editor__colors {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.editor__colors-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--tap);
+  padding: 0 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editor__colors-body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.85rem;
-  padding-top: 0.25rem;
+  padding: 0.25rem 0.85rem 0.85rem;
 }
 
 .editor__colors-note {
@@ -1188,7 +1207,8 @@ input {
 
 .editor__file-actions {
   display: flex;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .toolbar-btn--icon-text {
@@ -1494,6 +1514,35 @@ input {
   flex-shrink: 0;
 }
 
+/* Dock order: what you reach for mid-song comes first */
+.viewer-controls > .page-nav {
+  order: 0;
+}
+
+.viewer-controls > .segment {
+  order: 1;
+}
+
+.viewer-controls > .text-size {
+  order: 2;
+}
+
+.viewer-controls > .control--key {
+  order: 3;
+}
+
+.viewer-controls > .color-menu {
+  order: 4;
+}
+
+.viewer-controls > .control--charts {
+  order: 5;
+}
+
+.control--key > span {
+  display: none;
+}
+
 .control {
   display: inline-flex;
   align-items: center;
@@ -1652,7 +1701,6 @@ input {
 }
 
 .page-nav {
-  order: -1;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -1932,7 +1980,8 @@ input {
   margin: 0.3em 0;
   font-size: 0.85em;
   font-style: italic;
-  color: var(--muted);
+  /* Comments are the common way to label sections ({c: Verse 1}) */
+  color: var(--label-color, var(--muted));
 }
 
 .song-line {
@@ -2251,8 +2300,15 @@ input {
     border-top: 0;
   }
 
-  .page-nav {
+  .viewer-controls > * {
     order: 0;
+  }
+
+  .control--key > span {
+    display: inline;
+  }
+
+  .page-nav {
     margin-left: auto;
   }
 
@@ -2297,7 +2353,7 @@ input {
     grid-column: span 2;
   }
 
-  .editor__colors {
+  .editor__colors-body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2347,7 +2403,7 @@ input {
   }
 
   .editor__toolbar {
-    justify-content: flex-end;
+    display: none;
   }
 
   .editor__panes {
@@ -2359,23 +2415,38 @@ input {
     display: block;
   }
 
+  /* Details are always visible on desktop; the summary header is redundant */
   .editor__details-toggle {
-    cursor: default;
-    pointer-events: none;
-  }
-
-  .editor__details-chevron {
     display: none;
   }
 
-  /* Details are always visible on desktop */
   .editor__details .editor__details-body {
     display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: end;
+    border-top: 0;
+    padding-top: 1rem;
   }
 
-  .editor__details-toggle {
-    min-height: 0;
-    padding-bottom: 0.25rem;
+  .editor__details-body > .song-form__field:first-child,
+  .editor__details-body > .song-form__field:nth-child(2) {
+    grid-column: span 2;
+  }
+
+  .editor__details-body > .song-form__field:nth-child(3),
+  .editor__details-body > .song-form__field:nth-child(4) {
+    grid-column: span 1;
+  }
+
+  .editor__details-body > .editor__colors {
+    grid-column: span 4;
+    align-self: start;
+  }
+
+  .editor__details-body > .editor__file-actions {
+    grid-column: span 2;
+    align-self: start;
+    justify-content: flex-end;
   }
 }
 

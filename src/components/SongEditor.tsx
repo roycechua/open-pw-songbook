@@ -15,6 +15,7 @@ import {
   DEFAULT_LABEL_COLOR,
   createSong,
   downloadChordPro,
+  isValidSlug,
   parseChordPro,
   readChordProMeta,
   slugifyTitle,
@@ -161,10 +162,9 @@ export function SongEditor({ session, song }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [busyIntent, setBusyIntent] = useState<SaveIntent | null>(null)
   const [pane, setPane] = useState<PaneMode>('write')
-  const [detailsOpen, setDetailsOpen] = useState(mode === 'create')
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
 
-  const formRef = useRef<HTMLFormElement>(null)
   const editorRef = useRef<ChordProEditorHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const slugTouchedRef = useRef(mode === 'edit')
@@ -299,8 +299,16 @@ export function SongEditor({ session, song }: Props) {
   const save = useCallback(
     async (intent: SaveIntent) => {
       setError(null)
-      if (!formRef.current?.reportValidity()) {
+      // Validate by hand: the details fields may be collapsed (hidden inputs
+      // cannot show native validation bubbles).
+      if (!title.trim()) {
         setDetailsOpen(true)
+        setError('Title is required')
+        return
+      }
+      if (!isValidSlug(slug.trim().toLowerCase())) {
+        setDetailsOpen(true)
+        setError('Slug must be lowercase letters, numbers, and hyphens')
         return
       }
       if (!chordPro.trim()) {
@@ -439,9 +447,9 @@ export function SongEditor({ session, song }: Props) {
       </header>
 
       <form
-        ref={formRef}
         className="editor__form"
         onSubmit={onSubmit}
+        noValidate
       >
         {error ? (
           <p className="song-form__error" role="alert">
@@ -467,7 +475,7 @@ export function SongEditor({ session, song }: Props) {
               </span>
             </span>
             <span className="editor__details-chevron" aria-hidden="true">
-              {detailsOpen ? 'Hide' : 'Edit'}
+              {detailsOpen ? 'Hide details' : 'Details'}
             </span>
           </button>
 
@@ -526,27 +534,68 @@ export function SongEditor({ session, song }: Props) {
               />
             </label>
 
-            <div className="editor__colors">
-              <ColorField
-                id="chord-color"
-                label="Chord color"
-                value={authorColors.chordColor ?? DEFAULT_CHORD_COLOR}
-                isDefault={!authorColors.chordColor}
-                onChange={(hex) => setAuthorColor('chord', hex)}
-                onReset={() => setAuthorColor('chord', null)}
-              />
-              <ColorField
-                id="label-color"
-                label="Section label color"
-                value={authorColors.labelColor ?? DEFAULT_LABEL_COLOR}
-                isDefault={!authorColors.labelColor}
-                onChange={(hex) => setAuthorColor('label', hex)}
-                onReset={() => setAuthorColor('label', null)}
-              />
-              <p className="editor__colors-note">
-                Default for everyone viewing this song. Readers can still pick
-                their own colors.
-              </p>
+            <details className="editor__colors">
+              <summary className="editor__colors-summary">
+                <span className="color-menu__dots" aria-hidden="true">
+                  <i
+                    style={{
+                      backgroundColor:
+                        authorColors.chordColor ?? DEFAULT_CHORD_COLOR,
+                    }}
+                  />
+                  <i
+                    style={{
+                      backgroundColor:
+                        authorColors.labelColor ?? DEFAULT_LABEL_COLOR,
+                    }}
+                  />
+                </span>
+                Chord &amp; section label colors
+              </summary>
+              <div className="editor__colors-body">
+                <ColorField
+                  id="chord-color"
+                  label="Chord color"
+                  value={authorColors.chordColor ?? DEFAULT_CHORD_COLOR}
+                  isDefault={!authorColors.chordColor}
+                  onChange={(hex) => setAuthorColor('chord', hex)}
+                  onReset={() => setAuthorColor('chord', null)}
+                />
+                <ColorField
+                  id="label-color"
+                  label="Section label color"
+                  value={authorColors.labelColor ?? DEFAULT_LABEL_COLOR}
+                  isDefault={!authorColors.labelColor}
+                  onChange={(hex) => setAuthorColor('label', hex)}
+                  onReset={() => setAuthorColor('label', null)}
+                />
+                <p className="editor__colors-note">
+                  Default for everyone viewing this song. Readers can still
+                  pick their own colors.
+                </p>
+              </div>
+            </details>
+
+            <div className="editor__file-actions">
+              <button
+                type="button"
+                className="toolbar-btn toolbar-btn--icon-text"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <IconUpload />
+                <span>Import</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-btn toolbar-btn--icon-text"
+                disabled={!chordPro.trim()}
+                onClick={() =>
+                  downloadChordPro(slug || slugifyTitle(title), chordPro)
+                }
+              >
+                <IconDownload />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </section>
@@ -582,27 +631,6 @@ export function SongEditor({ session, song }: Props) {
               </button>
             </div>
 
-            <div className="editor__file-actions">
-              <button
-                type="button"
-                className="toolbar-btn toolbar-btn--icon-text"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <IconUpload />
-                <span>Import</span>
-              </button>
-              <button
-                type="button"
-                className="toolbar-btn toolbar-btn--icon-text"
-                disabled={!chordPro.trim()}
-                onClick={() =>
-                  downloadChordPro(slug || slugifyTitle(title), chordPro)
-                }
-              >
-                <IconDownload />
-                <span>Export</span>
-              </button>
-            </div>
           </div>
 
           <div

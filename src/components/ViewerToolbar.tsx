@@ -158,7 +158,7 @@ export function ViewerToolbar({
       </div>
 
       <div className="viewer-toolbar__controls viewer-controls">
-        <label className="control">
+        <label className="control control--key">
           <span>Key</span>
           <select
             value={currentKey}
@@ -191,7 +191,7 @@ export function ViewerToolbar({
           </button>
         </div>
 
-        <label className="control">
+        <label className="control control--charts">
           <span>Charts</span>
           <select
             value={charts}
