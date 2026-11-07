@@ -1,4 +1,4 @@
-import type { SongLine, ViewMode } from '#/lib/songbook'
+import { lineHasContent, type SongLine, type ViewMode } from '#/lib/songbook'
 
 type Props = {
   line: SongLine
@@ -6,6 +6,10 @@ type Props = {
 }
 
 export function ChordLine({ line, mode }: Props) {
+  if (!lineHasContent(line)) {
+    return <div className="song-line song-line--blank" aria-hidden="true" />
+  }
+
   const chordsOnly: string[] = []
   const lyricsParts: Array<{ chord?: string; lyric: string }> = []
 
@@ -33,9 +37,9 @@ export function ChordLine({ line, mode }: Props) {
     )
 
   if (mode === 'lyrics') {
-    if (isChordOnly) {
-      return <div className="song-line song-line--lyrics" aria-hidden />
-    }
+    // Instrumental/chord-only lines carry no lyrics; drop them so lyrics
+    // mode stays compact instead of leaving empty rows.
+    if (isChordOnly) return null
     const text = line.tokens
       .filter((t) => t.kind === 'lyric')
       .map((t) => (t.kind === 'lyric' ? t.text : ''))

@@ -1,6 +1,18 @@
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Spinner } from '#/components/loading'
-import { COMMON_KEYS, type ChartInstrument, type ViewMode } from '#/lib/songbook'
+import {
+  COMMON_KEYS,
+  DEFAULT_CHORD_COLOR,
+  DEFAULT_LABEL_COLOR,
+  TEXT_SCALE_MAX,
+  TEXT_SCALE_MIN,
+  TEXT_SCALE_STEP,
+  type ChartInstrument,
+  type SheetColors,
+  type ViewMode,
+} from '#/lib/songbook'
+import { ColorField } from './ColorField'
 
 type FavoriteControls = {
   /** Show add/remove only for published songs when logged in. */
@@ -14,6 +26,16 @@ type FavoriteControls = {
   onTogglePlaylist: () => void
 }
 
+type ColorControls = {
+  /** Author defaults from the song (may be empty). */
+  author: SheetColors
+  /** Viewer's own overrides (may be empty). */
+  override: SheetColors
+  onChange: (field: 'chord' | 'label', hex: string) => void
+  onReset: (field: 'chord' | 'label') => void
+  onResetAll: () => void
+}
+
 type Props = {
   title: string
   artist: string
@@ -23,6 +45,9 @@ type Props = {
   charts: ChartInstrument
   page: number
   pageCount: number
+  textScale: number
+  colors: ColorControls
+  onTextScaleChange: (scale: number) => void
   onKeyChange: (key: string) => void
   onModeChange: (mode: ViewMode) => void
   onChartsChange: (charts: ChartInstrument) => void
@@ -40,6 +65,9 @@ export function ViewerToolbar({
   charts,
   page,
   pageCount,
+  textScale,
+  colors,
+  onTextScaleChange,
   onKeyChange,
   onModeChange,
   onChartsChange,
@@ -50,6 +78,15 @@ export function ViewerToolbar({
   const hasPrev = page > 0
   const hasNext = page < pageCount - 1
   const multiPage = pageCount > 1
+  const [colorsOpen, setColorsOpen] = useState(false)
+  const scalePercent = Math.round(textScale * 100)
+  const canShrink = textScale > TEXT_SCALE_MIN + 0.001
+  const canGrow = textScale < TEXT_SCALE_MAX - 0.001
+  const hasOverride = Boolean(colors.override.chord || colors.override.label)
+  const chordShown =
+    colors.override.chord ?? colors.author.chord ?? DEFAULT_CHORD_COLOR
+  const labelShown =
+    colors.override.label ?? colors.author.label ?? DEFAULT_LABEL_COLOR
 
   return (
     <header className="viewer-toolbar no-print">
@@ -115,7 +152,7 @@ export function ViewerToolbar({
         </div>
       </div>
 
-      <div className="viewer-toolbar__controls">
+      <div className="viewer-toolbar__controls viewer-controls">
         <label className="control">
           <span>Key</span>
           <select
@@ -162,6 +199,90 @@ export function ViewerToolbar({
             <option value="both">Both</option>
           </select>
         </label>
+
+        <div className="control text-size" role="group" aria-label="Text size">
+          <button
+            type="button"
+            className="text-size__btn"
+            aria-label="Decrease text size"
+            disabled={!canShrink}
+            onClick={() => onTextScaleChange(textScale - TEXT_SCALE_STEP)}
+          >
+            <span className="text-size__a text-size__a--sm" aria-hidden="true">
+              A
+            </span>
+          </button>
+          <span className="text-size__value" aria-live="polite">
+            {scalePercent}%
+          </span>
+          <button
+            type="button"
+            className="text-size__btn"
+            aria-label="Increase text size"
+            disabled={!canGrow}
+            onClick={() => onTextScaleChange(textScale + TEXT_SCALE_STEP)}
+          >
+            <span className="text-size__a text-size__a--lg" aria-hidden="true">
+              A
+            </span>
+          </button>
+        </div>
+
+        <div className="control color-menu">
+          <button
+            type="button"
+            className={
+              colorsOpen ? 'toolbar-btn is-active' : 'toolbar-btn'
+            }
+            aria-expanded={colorsOpen}
+            aria-controls="viewer-colors-panel"
+            onClick={() => setColorsOpen((v) => !v)}
+          >
+            <span
+              className="color-menu__dots"
+              aria-hidden="true"
+            >
+              <i style={{ backgroundColor: chordShown }} />
+              <i style={{ backgroundColor: labelShown }} />
+            </span>
+            Colors
+          </button>
+          {colorsOpen ? (
+            <div
+              id="viewer-colors-panel"
+              className="color-menu__panel"
+              role="group"
+              aria-label="Chord and section label colors"
+            >
+              <ColorField
+                id="viewer-chord-color"
+                label="Chords"
+                value={chordShown}
+                isDefault={!colors.override.chord}
+                resetLabel={colors.author.chord ? 'Song default' : 'Default'}
+                onChange={(hex) => colors.onChange('chord', hex)}
+                onReset={() => colors.onReset('chord')}
+              />
+              <ColorField
+                id="viewer-label-color"
+                label="Section labels"
+                value={labelShown}
+                isDefault={!colors.override.label}
+                resetLabel={colors.author.label ? 'Song default' : 'Default'}
+                onChange={(hex) => colors.onChange('label', hex)}
+                onReset={() => colors.onReset('label')}
+              />
+              <button
+                type="button"
+                className="text-btn"
+                disabled={!hasOverride}
+                onClick={colors.onResetAll}
+              >
+                Use song colors
+              </button>
+            </div>
+          ) : null}
+        </div>
 
         {multiPage ? (
           <div className="page-nav" aria-live="polite">

@@ -11,12 +11,15 @@ import {
 import { BusyButton } from '#/components/loading'
 import {
   COMMON_KEYS,
+  DEFAULT_CHORD_COLOR,
+  DEFAULT_LABEL_COLOR,
   createSong,
   downloadChordPro,
   parseChordPro,
   readChordProMeta,
   slugifyTitle,
   updateSong,
+  upsertChordProColors,
   upsertChordProMeta,
   type SongMeta,
   type SongStatus,
@@ -25,6 +28,7 @@ import {
 } from '#/lib/songbook'
 import type { SessionProfile } from '#/lib/songbook/song-server'
 import { createClient } from '#/lib/supabase/client'
+import { ColorField } from './ColorField'
 import {
   ChordProEditor,
   type ChordProEditorHandle,
@@ -372,6 +376,12 @@ export function SongEditor({ session, song }: Props) {
     }
   }
 
+  const authorColors = useMemo(() => readChordProMeta(chordPro), [chordPro])
+
+  const setAuthorColor = (field: 'chord' | 'label', value: string | null) => {
+    setChordPro((prev) => upsertChordProColors(prev, { [field]: value }))
+  }
+
   const statusLabel = saved
     ? saved.status === 'published'
       ? 'Published'
@@ -515,6 +525,29 @@ export function SongEditor({ session, song }: Props) {
                 autoComplete="off"
               />
             </label>
+
+            <div className="editor__colors">
+              <ColorField
+                id="chord-color"
+                label="Chord color"
+                value={authorColors.chordColor ?? DEFAULT_CHORD_COLOR}
+                isDefault={!authorColors.chordColor}
+                onChange={(hex) => setAuthorColor('chord', hex)}
+                onReset={() => setAuthorColor('chord', null)}
+              />
+              <ColorField
+                id="label-color"
+                label="Section label color"
+                value={authorColors.labelColor ?? DEFAULT_LABEL_COLOR}
+                isDefault={!authorColors.labelColor}
+                onChange={(hex) => setAuthorColor('label', hex)}
+                onReset={() => setAuthorColor('label', null)}
+              />
+              <p className="editor__colors-note">
+                Default for everyone viewing this song. Readers can still pick
+                their own colors.
+              </p>
+            </div>
           </div>
         </section>
 

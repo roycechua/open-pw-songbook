@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo } from 'react'
 
-import { parseChordPro } from '#/lib/songbook'
+import { parseChordPro, sheetColorStyle } from '#/lib/songbook'
 import { SongSheet } from './SongSheet'
 
 type Props = {
@@ -42,7 +42,13 @@ export function ChordProPreview({
   }
 
   return (
-    <div className="chordpro-preview">
+    <div
+      className="chordpro-preview"
+      style={sheetColorStyle({
+        chord: parsed.chordColor,
+        label: parsed.labelColor,
+      })}
+    >
       {title || artist || key ? (
         <header className="chordpro-preview__meta">
           {title ? <h3 className="chordpro-preview__title">{title}</h3> : null}

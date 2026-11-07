@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   addFavorite,
+  clampTextScale,
   collectChords,
   linesPerPageForHeight,
+  loadTextScale,
+  loadViewerColors,
+  saveTextScale,
+  saveViewerColors,
+  sheetColorStyle,
+  tidyBlocks,
+  TEXT_SCALE_DEFAULT,
   listFavorites,
   paginateBlocks,
   removeFavorite,
@@ -11,6 +19,7 @@ import {
   type ChartInstrument,
   type ParsedSong,
   type PlaylistFavorite,
+  type SheetColors,
   type SongStatus,
   type ViewMode,
 } from '#/lib/songbook'
@@ -47,6 +56,8 @@ export function SongViewer({
   const [mode, setMode] = useState<ViewMode>('chords')
   const [charts, setCharts] = useState<ChartInstrument>('off')
   const [page, setPage] = useState(0)
+  const [textScale, setTextScale] = useState(TEXT_SCALE_DEFAULT)
+  const [colorOverride, setColorOverride] = useState<SheetColors>({})
   const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
   const scrollerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef(0)
@@ -115,10 +126,38 @@ export function SongViewer({
     return () => ro.disconnect()
   }, [])
 
-  const transposed = useMemo(
-    () => transposeParsedSong(parsed, currentKey),
-    [parsed, currentKey],
-  )
+  // Viewer preferences live in localStorage; read after mount so SSR and
+  // first client render match.
+  useEffect(() => {
+    setTextScale(loadTextScale())
+    setColorOverride(loadViewerColors())
+  }, [])
+
+  const onTextScaleChange = (next: number) => {
+    const clamped = clampTextScale(next)
+    setTextScale(clamped)
+    saveTextScale(clamped)
+    goToPage(0, 'instant')
+  }
+
+  const updateColorOverride = (next: SheetColors) => {
+    setColorOverride(next)
+    saveViewerColors(next)
+  }
+
+  const authorColors: SheetColors = {
+    chord: parsed.chordColor,
+    label: parsed.labelColor,
+  }
+  const effectiveColors: SheetColors = {
+    chord: colorOverride.chord ?? authorColors.chord,
+    label: colorOverride.label ?? authorColors.label,
+  }
+
+  const transposed = useMemo(() => {
+    const song = transposeParsedSong(parsed, currentKey)
+    return { ...song, blocks: tidyBlocks(song.blocks) }
+  }, [parsed, currentKey])
 
   const columns = useMemo(
     () => sheetColumnCount(scrollerSize.width),
@@ -132,8 +171,9 @@ export function SongViewer({
         scrollerWidthPx: scrollerSize.width,
         mode,
         columns,
+        fontScale: textScale,
       }),
-    [scrollerSize.height, scrollerSize.width, mode, columns],
+    [scrollerSize.height, scrollerSize.width, mode, columns, textScale],
   )
 
   const pages = useMemo(
@@ -266,7 +306,7 @@ export function SongViewer({
   const hasNext = page < pages.length - 1
 
   return (
-    <div className="song-viewer">
+    <div className="song-viewer" style={sheetColorStyle(effectiveColors)}>
       {showPlaylist && songId ? (
         <PlaylistSidebar
           favorites={favorites}
@@ -287,6 +327,17 @@ export function SongViewer({
         charts={charts}
         page={page}
         pageCount={pages.length}
+        textScale={textScale}
+        onTextScaleChange={onTextScaleChange}
+        colors={{
+          author: authorColors,
+          override: colorOverride,
+          onChange: (field, hex) =>
+            updateColorOverride({ ...colorOverride, [field]: hex }),
+          onReset: (field) =>
+            updateColorOverride({ ...colorOverride, [field]: undefined }),
+          onResetAll: () => updateColorOverride({}),
+        }}
         onKeyChange={(k) => {
           setCurrentKey(k)
           goToPage(0, 'instant')
@@ -331,6 +382,7 @@ export function SongViewer({
           ref={scrollerRef}
           className="page-scroller"
           aria-label="Song pages"
+          style={{ ['--sheet-scale' as string]: String(textScale) }}
         >
           {pages.map((blocks, i) => (
             <section
