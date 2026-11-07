@@ -11,11 +11,17 @@ import { NavigationProgress } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import type { AuthSession } from '#/lib/supabase'
 import { fetchAuthSession } from '#/lib/supabase/session'
+import { fetchAuthSessionClient } from '#/lib/supabase/session-client'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
   beforeLoad: async (): Promise<{ user: AuthSession | null }> => {
-    const user = await fetchAuthSession()
+    // SSR / first load: server function. Client navigations: talk to Supabase
+    // directly, since the app server is far from the Supabase region.
+    const user =
+      typeof window === 'undefined'
+        ? await fetchAuthSession()
+        : await fetchAuthSessionClient()
     return { user }
   },
   head: () => ({

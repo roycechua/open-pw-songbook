@@ -155,23 +155,13 @@ export async function getSongByUsernameSlug(
   slug: string,
 ): Promise<SongMeta | null> {
   const normalized = username.trim().toLowerCase()
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, username')
-    .eq('username', normalized)
-    .maybeSingle()
-
-  if (profileError) {
-    throw new Error(profileError.message)
-  }
-  if (!profile) return null
-
+  // Single round trip: inner-join the owner profile and filter on its username.
   const { data: song, error: songError } = await supabase
     .from('songs')
     .select(
-      'id, owner_id, slug, title, artist, original_key, chord_pro, status',
+      'id, owner_id, slug, title, artist, original_key, chord_pro, status, profiles!songs_owner_id_fkey!inner ( username )',
     )
-    .eq('owner_id', profile.id)
+    .eq('profiles.username', normalized)
     .eq('slug', slug)
     .maybeSingle()
 
@@ -180,7 +170,10 @@ export async function getSongByUsernameSlug(
   }
   if (!song) return null
 
-  return mapSongRow(song, profile.username)
+  const profile = Array.isArray(song.profiles)
+    ? song.profiles[0]
+    : song.profiles
+  return mapSongRow(song, profile?.username ?? normalized)
 }
 
 export async function getParsedSongByUsernameSlug(

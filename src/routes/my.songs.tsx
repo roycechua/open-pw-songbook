@@ -12,11 +12,16 @@ import {
   getSongByUsernameSlug,
   updateSongStatus,
 } from '#/lib/songbook/songs'
+import { loadMySongsClient } from '#/lib/songbook/song-client'
 import { loadMySongs } from '#/lib/songbook/song-server'
 
 export const Route = createFileRoute('/my/songs')({
   loader: async () => {
-    const data = await loadMySongs()
+    // SSR / first load: server function. Client navigations: direct to Supabase.
+    const data =
+      typeof window === 'undefined'
+        ? await loadMySongs()
+        : await loadMySongsClient()
     if (!data.session) {
       throw redirect({ to: '/login' })
     }
