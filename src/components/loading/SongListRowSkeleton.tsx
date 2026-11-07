@@ -16,9 +16,10 @@ export function SongListRowSkeleton({
             <SkeletonBlock className="skeleton--text skeleton--text-wide" />
           </div>
           <div className="song-list__icon-actions">
-            <SkeletonBlock className="skeleton--icon" />
-            <SkeletonBlock className="skeleton--icon" />
-            <SkeletonBlock className="skeleton--icon" />
+            <SkeletonBlock className="skeleton--action" />
+            <SkeletonBlock className="skeleton--action" />
+            <SkeletonBlock className="skeleton--action" />
+            <SkeletonBlock className="skeleton--action" />
           </div>
         </div>
       </li>

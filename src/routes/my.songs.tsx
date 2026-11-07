@@ -7,7 +7,11 @@ import {
   type SongListItem,
 } from '#/lib/songbook'
 import { createClient } from '#/lib/supabase/client'
-import { deleteSong, getSongByUsernameSlug } from '#/lib/songbook/songs'
+import {
+  deleteSong,
+  getSongByUsernameSlug,
+  updateSongStatus,
+} from '#/lib/songbook/songs'
 import { loadMySongs } from '#/lib/songbook/song-server'
 
 export const Route = createFileRoute('/my/songs')({
@@ -81,6 +85,28 @@ function MySongsPage() {
       downloadChordPro(full.slug, full.chordPro)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed')
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  const onToggleStatus = async (song: SongListItem) => {
+    const next = song.status === 'published' ? 'draft' : 'published'
+    setError(null)
+    setBusyKey(`status:${song.id}`)
+    try {
+      const supabase = createClient()
+      const result = await updateSongStatus(supabase, song.id, next)
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? 'Could not update status')
+        return
+      }
+      const status = result.data.status
+      setSongs((prev) =>
+        prev.map((s) => (s.id === song.id ? { ...s, status } : s)),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update status')
     } finally {
       setBusyKey(null)
     }
@@ -168,41 +194,62 @@ function MySongsPage() {
                       </span>
                     </span>
                   </Link>
-                  <div className="song-list__icon-actions">
+                  <div
+                    className="song-list__icon-actions"
+                    role="group"
+                    aria-label={`Actions for ${song.title}`}
+                  >
                     <Link
                       to="/songs/$username/$slug/edit"
                       params={{ username: song.username, slug: song.slug }}
-                      className="icon-btn icon-btn--edit"
+                      className="icon-btn icon-btn--labeled icon-btn--edit"
                       aria-label={`Edit ${song.title}`}
-                      title="Edit"
                     >
                       <IconEdit />
+                      <span className="icon-btn__label">Edit</span>
                     </Link>
                     <BusyButton
                       type="button"
-                      className="icon-btn"
-                      iconOnly
+                      className="icon-btn icon-btn--labeled"
                       busy={busyKey === `export:${song.id}`}
                       busyLabel="Exporting"
                       disabled={rowBusy}
                       aria-label={`Export ${song.title}`}
-                      title="Export ChordPro"
                       onClick={() => void onExport(song)}
                     >
                       <IconExport />
+                      <span className="icon-btn__label">Export</span>
                     </BusyButton>
                     <BusyButton
                       type="button"
-                      className="icon-btn icon-btn--danger"
-                      iconOnly
+                      className="icon-btn icon-btn--labeled icon-btn--danger"
                       busy={busyKey === `delete:${song.id}`}
                       busyLabel="Deleting"
                       disabled={rowBusy}
                       aria-label={`Delete ${song.title}`}
-                      title="Delete"
                       onClick={() => void onDelete(song)}
                     >
                       <IconTrash />
+                      <span className="icon-btn__label">Delete</span>
+                    </BusyButton>
+                    <BusyButton
+                      type="button"
+                      className="text-btn song-list__publish"
+                      busy={busyKey === `status:${song.id}`}
+                      busyLabel={
+                        song.status === 'published'
+                          ? 'Unpublishing…'
+                          : 'Publishing…'
+                      }
+                      disabled={rowBusy}
+                      aria-label={
+                        song.status === 'published'
+                          ? `Unpublish ${song.title}`
+                          : `Publish ${song.title}`
+                      }
+                      onClick={() => void onToggleStatus(song)}
+                    >
+                      {song.status === 'published' ? 'Unpublish' : 'Publish'}
                     </BusyButton>
                   </div>
                 </article>
