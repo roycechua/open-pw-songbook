@@ -16,6 +16,34 @@ export function trimLeadingEmptyBlocks(blocks: ParsedBlock[]): ParsedBlock[] {
 }
 
 /**
+ * Remove blank lines that only create dead vertical space: blanks right
+ * before or after a section header (the header already carries spacing),
+ * repeated blanks, and blanks at the start/end of the song.
+ * Idempotent, so it is safe to apply at both pagination and render time.
+ */
+export function tidyBlocks(blocks: ParsedBlock[]): ParsedBlock[] {
+  const isBlank = (block: ParsedBlock | undefined) =>
+    block?.kind === 'line' && !lineHasContent(block)
+
+  const out: ParsedBlock[] = []
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+    if (isBlank(block)) {
+      const prev = out[out.length - 1]
+      // Leading, repeated, or directly after a header
+      if (!prev || isBlank(prev) || prev.kind === 'section') continue
+      // Directly before the next header (or end of song)
+      let j = i + 1
+      while (j < blocks.length && isBlank(blocks[j])) j++
+      const next = blocks[j]
+      if (!next || next.kind === 'section') continue
+    }
+    out.push(block)
+  }
+  return out
+}
+
+/**
  * Group blocks into sections. A new group starts at each section header;
  * leading content before the first header is its own group.
  */
@@ -48,6 +76,8 @@ type PageBudgetOptions = {
   scrollerWidthPx: number
   mode: ViewMode
   columns?: 1 | 2
+  /** Reader text size multiplier (1 = 100%). */
+  fontScale?: number
 }
 
 export type PageBudget = {
@@ -79,13 +109,14 @@ export function linesPerPageForHeight(options: PageBudgetOptions): PageBudget {
   const baseLinePx = mode === 'lyrics' ? 26 : 40
   const narrowPenalty =
     columnWidthApprox < 300 ? 6 : columnWidthApprox < 400 ? 3 : 0
-  const linePx = baseLinePx + narrowPenalty
+  const fontScale = Math.min(2, Math.max(0.5, options.fontScale ?? 1))
+  const linePx = (baseLinePx + narrowPenalty) * fontScale
 
   // Extra slack in 2-col mode — both columns need clear bottom breathing room
   const slack = columns === 2 ? 36 : 20
   const columnCapacity = Math.max(4, Math.floor((usable - slack) / linePx))
   const linesPerPage = Math.min(
-    columns === 2 ? 28 : 16,
+    Math.round((columns === 2 ? 28 : 16) / fontScale),
     columnCapacity * columns,
   )
 

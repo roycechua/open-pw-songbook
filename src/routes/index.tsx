@@ -64,26 +64,20 @@ function SongIndex() {
   return (
     <main className="song-index">
       <header className="song-index__header">
-        <h1>Songs</h1>
-        <p className="lede">
-          Chord sheets for mobile and tablet — swipe pages, change key, print.
-        </p>
-        <p className="song-index__nav">
-          {user ? (
-            <>
-              <Link to="/my/songs" className="back-link">
-                My songs
-              </Link>
-              <Link to="/songs/new" className="back-link">
-                Add New Song
-              </Link>
-            </>
-          ) : (
-            <Link to="/login" className="back-link">
-              Log in
+        <div className="song-index__heading">
+          <h1>Discover</h1>
+          <p className="lede">
+            Chord sheets made for stage and mobile: swipe pages, change key,
+            resize text, print.
+          </p>
+        </div>
+        {user ? (
+          <div className="song-index__actions">
+            <Link to="/songs/new" className="btn btn--primary">
+              Add new song
             </Link>
-          )}
-        </p>
+          </div>
+        ) : null}
       </header>
 
       {songs.length === 0 ? (

@@ -54,6 +54,8 @@ export const KNOWN_DIRECTIVES = [
   'eov',
   'eob',
   'eoi',
+  'x_chord_color',
+  'x_label_color',
 ] as const
 
 const KNOWN_SET = new Set<string>(KNOWN_DIRECTIVES)

@@ -308,6 +308,28 @@ export async function updateSong(
   }
 }
 
+/** Publish or unpublish without touching the rest of the song. */
+export async function updateSongStatus(
+  supabase: SongbookClient,
+  songId: string,
+  status: SongStatus,
+): Promise<SongMutationResult<{ status: SongStatus }>> {
+  const { data, error } = await supabase
+    .from('songs')
+    .update({ status })
+    .eq('id', songId)
+    .select('status')
+    .maybeSingle()
+
+  if (error) {
+    return mutationError(error.message, error.code)
+  }
+  if (!data) {
+    return mutationError('Song not found or not owned by you', 'not_found')
+  }
+  return { data: { status: data.status }, error: null }
+}
+
 export async function deleteSong(
   supabase: SongbookClient,
   songId: string,
