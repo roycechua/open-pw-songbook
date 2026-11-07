@@ -72,6 +72,10 @@ export type ParsedSong = {
   title: string
   artist: string
   key: string
+  /** Author default from `{x_chord_color: #rrggbb}`. */
+  chordColor?: string
+  /** Author default from `{x_label_color: #rrggbb}`. */
+  labelColor?: string
   blocks: ParsedBlock[]
 }
 

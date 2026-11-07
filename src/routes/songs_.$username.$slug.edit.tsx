@@ -1,6 +1,6 @@
-import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { SongEditorSkeleton } from '#/components/loading'
-import { SongEditorForm } from '#/components/SongEditorForm'
+import { SongEditor } from '#/components/SongEditor'
 import { APP_NAME } from '#/lib/brand'
 import { loadSongForEdit } from '#/lib/songbook/song-server'
 
@@ -40,54 +40,5 @@ export const Route = createFileRoute('/songs_/$username/$slug/edit')({
 
 function EditSongPage() {
   const { song, session } = Route.useLoaderData()
-  const navigate = useNavigate()
-
-  return (
-    <main className="song-index">
-      <header className="song-index__header">
-        <h1>Edit song</h1>
-        <p className="lede">
-          Update ChordPro and publishing details for @{session.username}.
-        </p>
-        <p className="song-index__nav">
-          <Link
-            to="/songs/$username/$slug"
-            params={{ username: song.username, slug: song.slug }}
-            className="back-link"
-          >
-            View
-          </Link>
-          <Link to="/my/songs" className="back-link">
-            My songs
-          </Link>
-        </p>
-      </header>
-
-      <SongEditorForm
-        mode="edit"
-        ownerId={session.userId}
-        initial={{
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          originalKey: song.originalKey,
-          slug: song.slug,
-          chordPro: song.chordPro,
-          status: song.status,
-        }}
-        onSaved={(saved) => {
-          void navigate({
-            to: '/songs/$username/$slug',
-            params: { username: saved.username, slug: saved.slug },
-          })
-        }}
-        onCancel={() => {
-          void navigate({
-            to: '/songs/$username/$slug',
-            params: { username: song.username, slug: song.slug },
-          })
-        }}
-      />
-    </main>
-  )
+  return <SongEditor session={session} song={song} />
 }

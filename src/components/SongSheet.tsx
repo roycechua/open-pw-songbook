@@ -1,5 +1,6 @@
 import {
   groupIntoSections,
+  tidyBlocks,
   trimLeadingEmptyBlocks,
   type ParsedBlock,
   type ViewMode,
@@ -31,7 +32,9 @@ function renderBlock(block: ParsedBlock, key: number, mode: ViewMode) {
 }
 
 export function SongSheet({ blocks, mode, columns = 1 }: Props) {
-  const sections = groupIntoSections(trimLeadingEmptyBlocks(blocks))
+  const sections = groupIntoSections(
+    trimLeadingEmptyBlocks(tidyBlocks(blocks)),
+  )
 
   return (
     <div

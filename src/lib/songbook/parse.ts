@@ -6,6 +6,11 @@ import type {
   SongLine,
 } from './types'
 import {
+  CHORD_COLOR_DIRECTIVES,
+  LABEL_COLOR_DIRECTIVES,
+  normalizeHexColor,
+} from './colors'
+import {
   preferFlats,
   splitChord,
   transposeChordSymbol,
@@ -66,6 +71,8 @@ export function parseChordPro(source: string): ParsedSong {
   let title = ''
   let artist = ''
   let key = ''
+  let chordColor: string | undefined
+  let labelColor: string | undefined
   const blocks: ParsedBlock[] = []
 
   const lines = source.replace(/\r\n/g, '\n').split('\n')
@@ -96,6 +103,14 @@ export function parseChordPro(source: string): ParsedSong {
         key = value ?? key
         continue
       }
+      if ((CHORD_COLOR_DIRECTIVES as readonly string[]).includes(lower)) {
+        chordColor = normalizeHexColor(value) ?? chordColor
+        continue
+      }
+      if ((LABEL_COLOR_DIRECTIVES as readonly string[]).includes(lower)) {
+        labelColor = normalizeHexColor(value) ?? labelColor
+        continue
+      }
       if (isEndDirective(lower)) continue
 
       const section = sectionLabelFromDirective(lower, value)
@@ -113,7 +128,7 @@ export function parseChordPro(source: string): ParsedSong {
     blocks.push({ kind: 'line', tokens: parseLineTokens(line) })
   }
 
-  return { title, artist, key, blocks }
+  return { title, artist, key, chordColor, labelColor, blocks }
 }
 
 export function transposeParsedSong(
@@ -189,6 +204,10 @@ export type ChordProMetaRead = {
   artist?: string
   /** Present when a complete `{key}` / `{k}` directive exists. */
   key?: string
+  /** Valid `{x_chord_color}` value, when present. */
+  chordColor?: string
+  /** Valid `{x_label_color}` value, when present. */
+  labelColor?: string
 }
 
 /**
@@ -209,6 +228,11 @@ export function readChordProMeta(source: string): ChordProMetaRead {
     if (TITLE_ALIASES.has(name)) meta.title = value
     else if (ARTIST_ALIASES.has(name)) meta.artist = value
     else if (KEY_ALIASES.has(name)) meta.key = value
+    else if ((CHORD_COLOR_DIRECTIVES as readonly string[]).includes(name)) {
+      meta.chordColor = normalizeHexColor(value)
+    } else if ((LABEL_COLOR_DIRECTIVES as readonly string[]).includes(name)) {
+      meta.labelColor = normalizeHexColor(value)
+    }
   }
 
   return meta
@@ -272,5 +296,47 @@ export function upsertChordProMeta(
   if (meta.key !== undefined) {
     next = upsertChordProDirective(next, META_ALIASES.key, 'key', meta.key)
   }
+  return next
+}
+
+/** Remove every directive matching one of `aliases` (no-op when absent). */
+export function removeChordProDirective(
+  source: string,
+  aliases: readonly string[],
+): string {
+  const aliasSet = new Set(aliases.map((name) => name.toLowerCase()))
+  const lines = source.replace(/\r\n/g, '\n').split('\n')
+  const kept = lines.filter((line) => {
+    const match = line.trim().match(DIRECTIVE_RE)
+    return !(match && aliasSet.has(match[1]!.trim().toLowerCase()))
+  })
+  return kept.join('\n')
+}
+
+/**
+ * Set (hex) or clear (null) the author color directives.
+ * `undefined` leaves that color untouched.
+ */
+export function upsertChordProColors(
+  source: string,
+  colors: { chord?: string | null; label?: string | null },
+): string {
+  let next = source
+  const apply = (
+    value: string | null | undefined,
+    aliases: readonly string[],
+    primary: string,
+  ) => {
+    if (value === undefined) return
+    if (value === null) {
+      next = removeChordProDirective(next, aliases)
+      return
+    }
+    const hex = normalizeHexColor(value)
+    if (!hex) return
+    next = upsertChordProDirective(next, aliases, primary, hex)
+  }
+  apply(colors.chord, CHORD_COLOR_DIRECTIVES, 'x_chord_color')
+  apply(colors.label, LABEL_COLOR_DIRECTIVES, 'x_label_color')
   return next
 }
