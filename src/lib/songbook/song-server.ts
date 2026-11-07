@@ -14,6 +14,19 @@ export type SessionProfile = {
   email: string
 }
 
+/**
+ * Authenticated user id from the verified JWT claims. Verifies locally when the
+ * project uses asymmetric signing keys (no Auth round trip); otherwise falls
+ * back to the Auth server. Returns null for guests.
+ */
+async function getUserId(
+  supabase: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  const { data, error } = await supabase.auth.getClaims()
+  if (error || !data?.claims.sub) return null
+  return data.claims.sub
+}
+
 /** Current auth user + profile, or null if signed out / env missing. */
 export const getSessionProfile = createServerFn({ method: 'GET' }).handler(
   async (): Promise<SessionProfile | null> => {
@@ -21,16 +34,13 @@ export const getSessionProfile = createServerFn({ method: 'GET' }).handler(
 
     try {
       const supabase = createClient()
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
-      if (userError || !user) return null
+      const userId = await getUserId(supabase)
+      if (!userId) return null
 
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, username, email')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle()
 
       if (error || !profile) return null
@@ -68,15 +78,13 @@ export const loadMySongs = createServerFn({ method: 'GET' }).handler(
 
     try {
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return { session: null as SessionProfile | null, songs: [] }
+      const userId = await getUserId(supabase)
+      if (!userId) return { session: null as SessionProfile | null, songs: [] }
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, username, email')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle()
 
       if (!profile) return { session: null as SessionProfile | null, songs: [] }
@@ -101,17 +109,13 @@ export const loadSongByUsernameSlug = createServerFn({ method: 'GET' })
 
     try {
       const supabase = createClient()
-      const parsed = await getParsedSongByUsernameSlug(
-        supabase,
-        data.username,
-        data.slug,
-      )
+      const [parsed, userId] = await Promise.all([
+        getParsedSongByUsernameSlug(supabase, data.username, data.slug),
+        getUserId(supabase).catch(() => null),
+      ])
       if (!parsed) return null
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      const isOwner = Boolean(user && user.id === parsed.meta.ownerId)
+      const isOwner = Boolean(userId && userId === parsed.meta.ownerId)
 
       return { ...parsed, isOwner }
     } catch {
@@ -126,30 +130,25 @@ export const loadSongForEdit = createServerFn({ method: 'GET' })
 
     try {
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return { kind: 'unauthenticated' as const }
+      const userId = await getUserId(supabase)
+      if (!userId) return { kind: 'unauthenticated' as const }
 
-      const song = await getSongByUsernameSlug(
-        supabase,
-        data.username,
-        data.slug,
-      )
+      const [song, { data: profile }] = await Promise.all([
+        getSongByUsernameSlug(supabase, data.username, data.slug),
+        supabase
+          .from('profiles')
+          .select('username, email')
+          .eq('id', userId)
+          .maybeSingle(),
+      ])
       if (!song) return { kind: 'not_found' as const }
-      if (song.ownerId !== user.id) return { kind: 'forbidden' as const }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username, email')
-        .eq('id', user.id)
-        .maybeSingle()
+      if (song.ownerId !== userId) return { kind: 'forbidden' as const }
 
       return {
         kind: 'ok' as const,
         song,
         session: {
-          userId: user.id,
+          userId,
           username: profile?.username ?? song.username,
           email: profile?.email ?? '',
         } satisfies SessionProfile,
