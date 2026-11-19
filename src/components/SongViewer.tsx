@@ -4,12 +4,15 @@ import {
   clampTextScale,
   collectChords,
   linesPerPageForHeight,
+  loadSwipeDirection,
   loadTextScale,
   loadViewerColors,
+  saveSwipeDirection,
   saveTextScale,
   saveViewerColors,
   sheetColorStyle,
   tidyBlocks,
+  SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
   listFavorites,
   paginateBlocks,
@@ -21,6 +24,7 @@ import {
   type PlaylistFavorite,
   type SheetColors,
   type SongStatus,
+  type SwipeDirection,
   type ViewMode,
 } from '#/lib/songbook'
 import { createClient } from '#/lib/supabase/client'
@@ -57,12 +61,18 @@ export function SongViewer({
   const [charts, setCharts] = useState<ChartInstrument>('off')
   const [page, setPage] = useState(0)
   const [textScale, setTextScale] = useState(TEXT_SCALE_DEFAULT)
+  const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(
+    SWIPE_DIRECTION_DEFAULT,
+  )
   const [colorOverride, setColorOverride] = useState<SheetColors>({})
   const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
   const scrollerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef(0)
+  const swipeDirectionRef = useRef(swipeDirection)
   const ignoreScrollRef = useRef(false)
   const ignoreScrollTimer = useRef<number | null>(null)
+  const verticalSwipe = swipeDirection === 'vertical'
+  swipeDirectionRef.current = swipeDirection
 
   const showPlaylist = Boolean(userId && songId)
   const canFavorite = Boolean(
@@ -130,6 +140,7 @@ export function SongViewer({
   // first client render match.
   useEffect(() => {
     setTextScale(loadTextScale())
+    setSwipeDirection(loadSwipeDirection())
     setColorOverride(loadViewerColors())
   }, [])
 
@@ -138,6 +149,12 @@ export function SongViewer({
     setTextScale(clamped)
     saveTextScale(clamped)
     goToPage(0, 'instant')
+  }
+
+  const onSwipeDirectionChange = (next: SwipeDirection) => {
+    if (next === swipeDirection) return
+    setSwipeDirection(next)
+    saveSwipeDirection(next)
   }
 
   const updateColorOverride = (next: SheetColors) => {
@@ -199,19 +216,31 @@ export function SongViewer({
     setPage(clamped)
     if (!el) return
 
-    const target = clamped * el.clientWidth
-    if (Math.abs(el.scrollLeft - target) < 1) return
+    const vertical = swipeDirectionRef.current === 'vertical'
+    const pageSize = vertical ? el.clientHeight : el.clientWidth
+    const current = vertical ? el.scrollTop : el.scrollLeft
+    const target = clamped * pageSize
+    if (Math.abs(current - target) < 1) return
 
     ignoreScrollRef.current = true
     if (ignoreScrollTimer.current != null) {
       window.clearTimeout(ignoreScrollTimer.current)
     }
-    el.scrollTo({ left: target, behavior })
+    el.scrollTo(
+      vertical
+        ? { top: target, left: 0, behavior }
+        : { left: target, top: 0, behavior },
+    )
 
     const release = () => {
       // Snap final position without another smooth animation
-      if (Math.abs(el.scrollLeft - target) > 0.5) {
-        el.scrollTo({ left: target, behavior: 'instant' })
+      const pos = vertical ? el.scrollTop : el.scrollLeft
+      if (Math.abs(pos - target) > 0.5) {
+        el.scrollTo(
+          vertical
+            ? { top: target, left: 0, behavior: 'instant' }
+            : { left: target, top: 0, behavior: 'instant' },
+        )
       }
       clearIgnoreScroll()
       el.removeEventListener('scrollend', release)
@@ -231,24 +260,31 @@ export function SongViewer({
     })
   }, [pages.length])
 
-  // Only correct scroll when page count/layout changes — never after swipe settle
+  // Only correct scroll when page count/layout/direction changes — never after swipe settle
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    const target = pageRef.current * el.clientWidth
-    if (Math.abs(el.scrollLeft - target) <= 1) return
+    const pageSize = verticalSwipe ? el.clientHeight : el.clientWidth
+    const target = pageRef.current * pageSize
     ignoreScrollRef.current = true
-    el.scrollTo({ left: target, behavior: 'instant' })
+    // Zero the unused axis so a direction switch doesn't leave residual scroll.
+    el.scrollTo(
+      verticalSwipe
+        ? { top: target, left: 0, behavior: 'instant' }
+        : { left: target, top: 0, behavior: 'instant' },
+    )
     ignoreScrollTimer.current = window.setTimeout(clearIgnoreScroll, 32)
-  }, [pages.length, scrollerSize.width])
+  }, [pages.length, scrollerSize.width, scrollerSize.height, verticalSwipe])
 
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
     const onScroll = () => {
       if (ignoreScrollRef.current) return
-      const w = el.clientWidth || 1
-      const next = Math.round(el.scrollLeft / w)
+      const vertical = swipeDirectionRef.current === 'vertical'
+      const pageSize = (vertical ? el.clientHeight : el.clientWidth) || 1
+      const offset = vertical ? el.scrollTop : el.scrollLeft
+      const next = Math.round(offset / pageSize)
       if (next === pageRef.current) return
       pageRef.current = next
       setPage(next)
@@ -344,6 +380,8 @@ export function SongViewer({
         }}
         onModeChange={setMode}
         onChartsChange={setCharts}
+        swipeDirection={swipeDirection}
+        onSwipeDirectionChange={onSwipeDirectionChange}
         onPageChange={(p) => goToPage(p, 'smooth')}
         onPrint={onPrint}
         favorites={
@@ -372,6 +410,7 @@ export function SongViewer({
       <div
         className={[
           'page-stage',
+          verticalSwipe ? 'page-stage--vertical' : '',
           hasPrev ? 'has-prev' : '',
           hasNext ? 'has-next' : '',
         ]
@@ -380,7 +419,9 @@ export function SongViewer({
       >
         <div
           ref={scrollerRef}
-          className="page-scroller"
+          className={
+            verticalSwipe ? 'page-scroller page-scroller--vertical' : 'page-scroller'
+          }
           aria-label="Song pages"
           style={{ ['--sheet-scale' as string]: String(textScale) }}
         >

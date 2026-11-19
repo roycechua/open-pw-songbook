@@ -1523,20 +1523,24 @@ input {
   order: 1;
 }
 
-.viewer-controls > .text-size {
+.viewer-controls > .segment--swipe {
   order: 2;
 }
 
-.viewer-controls > .control--key {
+.viewer-controls > .text-size {
   order: 3;
 }
 
-.viewer-controls > .color-menu {
+.viewer-controls > .control--key {
   order: 4;
 }
 
-.viewer-controls > .control--charts {
+.viewer-controls > .color-menu {
   order: 5;
+}
+
+.viewer-controls > .control--charts {
+  order: 6;
 }
 
 .control--key > span {
@@ -1577,6 +1581,22 @@ input {
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--surface-raised);
+}
+
+.segment--swipe button {
+  min-width: 2.75rem;
+  padding: 0 0.55rem;
+}
+
+.swipe-dir-glyph {
+  display: inline-block;
+  font-size: 1.05rem;
+  letter-spacing: -0.12em;
+  line-height: 1;
+}
+
+.swipe-dir-glyph--vertical {
+  transform: rotate(90deg);
 }
 
 .segment button {
@@ -1845,6 +1865,15 @@ input {
   scrollbar-width: none;
 }
 
+.page-scroller--vertical {
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
+}
+
 .page-scroller::-webkit-scrollbar {
   display: none;
 }
@@ -1891,6 +1920,42 @@ input {
   line-height: 1;
   color: var(--accent);
   animation: page-hint-pulse 1.8s ease-in-out infinite;
+}
+
+.page-stage--vertical .page-edge {
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 2.25rem;
+}
+
+.page-stage--vertical .page-edge--prev {
+  top: 0;
+  bottom: auto;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 82%, transparent),
+    transparent
+  );
+}
+
+.page-stage--vertical .page-edge--next {
+  top: auto;
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--bg) 88%, transparent),
+    transparent
+  );
+}
+
+.page-stage--vertical .page-edge--next.is-visible::after {
+  content: '›';
+  right: auto;
+  left: 50%;
+  top: auto;
+  bottom: 0.2rem;
+  transform: translateX(-50%) rotate(90deg);
 }
 
 .song-page {
