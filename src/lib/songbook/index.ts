@@ -8,6 +8,8 @@ export * from './view-prefs'
 export * from './user-settings'
 export * from './songs'
 export * from './playlist'
+export * from './playlists'
+export * from './search'
 export {
   KNOWN_DIRECTIVES,
   SNIPPETS,

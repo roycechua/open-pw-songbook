@@ -28,6 +28,16 @@ export type PlaylistItem = {
   created_at: string
 }
 
+export type Playlist = {
+  id: string
+  owner_id: string
+  name: string
+  description: string
+  song_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
 export type UserSettings = {
   user_id: string
   text_scale: number
@@ -128,6 +138,36 @@ export type Database = {
             columns: ['song_id']
             isOneToOne: false
             referencedRelation: 'songs'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      playlists: {
+        Row: Playlist
+        Insert: {
+          id?: string
+          owner_id: string
+          name: string
+          description?: string
+          song_ids?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          name?: string
+          description?: string
+          song_ids?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'playlists_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
             referencedColumns: ['id']
           },
         ]

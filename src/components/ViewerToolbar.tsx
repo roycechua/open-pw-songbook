@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Spinner } from '#/components/loading'
 import {
   COMMON_KEYS,
@@ -21,8 +21,10 @@ type FavoriteControls = {
   isFavorited: boolean
   busy: boolean
   onToggleFavorite: () => void
-  /** Touch / coarse: explicit favorites panel toggle. */
+  /** Touch / coarse: explicit sidebar panel toggle. */
   showPlaylistToggle: boolean
+  /** "Favorites" or the active playlist's name. */
+  playlistToggleLabel: string
   playlistOpen: boolean
   onTogglePlaylist: () => void
 }
@@ -57,6 +59,10 @@ type Props = {
   onPageChange: (page: number) => void
   onPrint: () => void
   favorites?: FavoriteControls
+  /** Add-to-playlist control (signed-in only). */
+  addToPlaylist?: ReactNode
+  /** When viewing from a playlist, back goes to that playlist. */
+  backTo?: { playlistId: string; label: string }
 }
 
 export function ViewerToolbar({
@@ -79,6 +85,8 @@ export function ViewerToolbar({
   onPageChange,
   onPrint,
   favorites,
+  addToPlaylist,
+  backTo,
 }: Props) {
   const hasPrev = page > 0
   const hasNext = page < pageCount - 1
@@ -96,10 +104,22 @@ export function ViewerToolbar({
   return (
     <header className="viewer-toolbar no-print">
       <div className="viewer-toolbar__top">
-        <Link to="/" className="viewer-back" aria-label="Back to songs">
-          <span aria-hidden="true">‹</span>
-          <span className="viewer-back__label">Songs</span>
-        </Link>
+        {backTo ? (
+          <Link
+            to="/playlists/$playlistId"
+            params={{ playlistId: backTo.playlistId }}
+            className="viewer-back"
+            aria-label={`Back to playlist ${backTo.label}`}
+          >
+            <span aria-hidden="true">‹</span>
+            <span className="viewer-back__label">Playlist</span>
+          </Link>
+        ) : (
+          <Link to="/" className="viewer-back" aria-label="Back to songs">
+            <span aria-hidden="true">‹</span>
+            <span className="viewer-back__label">Songs</span>
+          </Link>
+        )}
         <div className="viewer-toolbar__titles">
           <h1 className="viewer-title">{title}</h1>
           <p className="viewer-artist">{artist}</p>
@@ -117,7 +137,9 @@ export function ViewerToolbar({
               aria-controls="playlist-sidebar-panel"
               onClick={favorites.onTogglePlaylist}
             >
-              Favorites
+              <span className="toolbar-btn__truncate">
+                {favorites.playlistToggleLabel}
+              </span>
             </button>
           ) : null}
           {favorites?.canFavorite ? (
@@ -152,6 +174,7 @@ export function ViewerToolbar({
               )}
             </button>
           ) : null}
+          {addToPlaylist}
           <button
             type="button"
             className="toolbar-btn toolbar-btn--print"

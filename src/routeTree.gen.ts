@@ -17,6 +17,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as MySongsRouteImport } from './routes/my.songs'
+import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
+import { Route as PlaylistsPlaylistIdRouteImport } from './routes/playlists.$playlistId'
 import { Route as SongsNewRouteImport } from './routes/songs.new'
 import { Route as SongsUsernameSlugRouteImport } from './routes/songs.$username.$slug'
 import { Route as SongsUsernameSlugEditRouteImport } from './routes/songs_.$username.$slug.edit'
@@ -61,6 +63,16 @@ const MySongsRoute = MySongsRouteImport.update({
   path: '/my/songs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlaylistsIndexRoute = PlaylistsIndexRouteImport.update({
+  id: '/playlists/',
+  path: '/playlists/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaylistsPlaylistIdRoute = PlaylistsPlaylistIdRouteImport.update({
+  id: '/playlists/$playlistId',
+  path: '/playlists/$playlistId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SongsNewRoute = SongsNewRouteImport.update({
   id: '/songs/new',
   path: '/songs/new',
@@ -86,7 +98,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
+  '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/new': typeof SongsNewRoute
+  '/playlists/': typeof PlaylistsIndexRoute
   '/songs/$username/$slug': typeof SongsUsernameSlugRoute
   '/songs/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
@@ -99,7 +113,9 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
+  '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/new': typeof SongsNewRoute
+  '/playlists': typeof PlaylistsIndexRoute
   '/songs/$username/$slug': typeof SongsUsernameSlugRoute
   '/songs/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
@@ -113,7 +129,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
+  '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/new': typeof SongsNewRoute
+  '/playlists/': typeof PlaylistsIndexRoute
   '/songs/$username/$slug': typeof SongsUsernameSlugRoute
   '/songs_/$username/$slug/edit': typeof SongsUsernameSlugEditRoute
 }
@@ -128,7 +146,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
+    | '/playlists/$playlistId'
     | '/songs/new'
+    | '/playlists/'
     | '/songs/$username/$slug'
     | '/songs/$username/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -141,7 +161,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
+    | '/playlists/$playlistId'
     | '/songs/new'
+    | '/playlists'
     | '/songs/$username/$slug'
     | '/songs/$username/$slug/edit'
   id:
@@ -154,7 +176,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
+    | '/playlists/$playlistId'
     | '/songs/new'
+    | '/playlists/'
     | '/songs/$username/$slug'
     | '/songs_/$username/$slug/edit'
   fileRoutesById: FileRoutesById
@@ -168,7 +192,9 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   MySongsRoute: typeof MySongsRoute
+  PlaylistsPlaylistIdRoute: typeof PlaylistsPlaylistIdRoute
   SongsNewRoute: typeof SongsNewRoute
+  PlaylistsIndexRoute: typeof PlaylistsIndexRoute
   SongsUsernameSlugRoute: typeof SongsUsernameSlugRoute
   SongsUsernameSlugEditRoute: typeof SongsUsernameSlugEditRoute
 }
@@ -231,6 +257,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MySongsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/playlists/': {
+      id: '/playlists/'
+      path: '/playlists'
+      fullPath: '/playlists/'
+      preLoaderRoute: typeof PlaylistsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playlists/$playlistId': {
+      id: '/playlists/$playlistId'
+      path: '/playlists/$playlistId'
+      fullPath: '/playlists/$playlistId'
+      preLoaderRoute: typeof PlaylistsPlaylistIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/songs/new': {
       id: '/songs/new'
       path: '/songs/new'
@@ -264,7 +304,9 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   MySongsRoute: MySongsRoute,
+  PlaylistsPlaylistIdRoute: PlaylistsPlaylistIdRoute,
   SongsNewRoute: SongsNewRoute,
+  PlaylistsIndexRoute: PlaylistsIndexRoute,
   SongsUsernameSlugRoute: SongsUsernameSlugRoute,
   SongsUsernameSlugEditRoute: SongsUsernameSlugEditRoute,
 }

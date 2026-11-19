@@ -1,19 +1,43 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { AddToPlaylistButton } from '#/components/AddToPlaylistButton'
+import { FavoriteStarButton } from '#/components/FavoriteStarButton'
+import { PlaylistCard } from '#/components/PlaylistCard'
 import { SongListSkeleton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
-import { loadPublishedSongsClient } from '#/lib/songbook/song-client'
-import { loadPublishedSongs } from '#/lib/songbook/song-server'
+import {
+  HOME_PLAYLIST_PREVIEW_LIMIT,
+  listPlaylists,
+} from '#/lib/songbook/playlists'
+import { matchesSongSearch } from '#/lib/songbook/search'
+import { createClient } from '#/lib/supabase/client'
+import {
+  loadHomeExtrasClient,
+  loadPublishedSongsClient,
+} from '#/lib/songbook/song-client'
+import {
+  loadHomeExtras,
+  loadPublishedSongs,
+  type HomeExtras,
+} from '#/lib/songbook/song-server'
 import type { SongListItem } from '#/lib/songbook/types'
 
+const NO_EXTRAS: HomeExtras = { playlists: [], favoriteSongIds: [] }
+
 export const Route = createFileRoute('/')({
-  loader: async () => {
+  loader: async ({ context }) => {
     // SSR / first load: server function. Client navigations: direct to Supabase.
-    const songs =
-      typeof window === 'undefined'
-        ? await loadPublishedSongs()
-        : await loadPublishedSongsClient()
-    return { songs }
+    const onServer = typeof window === 'undefined'
+    const signedIn = Boolean(context.user)
+    const [songs, extras] = await Promise.all([
+      onServer ? loadPublishedSongs() : loadPublishedSongsClient(),
+      !signedIn
+        ? NO_EXTRAS
+        : onServer
+          ? loadHomeExtras()
+          : loadHomeExtrasClient(),
+    ])
+    return { songs, extras }
   },
   pendingComponent: () => <SongListSkeleton variant="catalog" />,
   component: SongIndex,
@@ -36,33 +60,52 @@ function titleFirstLetter(title: string): string {
   return /^[A-Z]$/.test(first) ? first : '#'
 }
 
-function matchesSearch(song: SongListItem, query: string): boolean {
-  if (!query) return true
-  const q = query.toLowerCase()
-  return (
-    song.title.toLowerCase().includes(q) ||
-    song.artist.toLowerCase().includes(q) ||
-    song.username.toLowerCase().includes(q)
-  )
-}
-
 function matchesLetter(song: SongListItem, letter: LetterFilter): boolean {
   if (letter === 'all') return true
   return titleFirstLetter(song.title) === letter
 }
 
 function SongIndex() {
-  const { songs } = Route.useLoaderData()
+  const { songs, extras } = Route.useLoaderData()
   const { user } = Route.useRouteContext()
   const [query, setQuery] = useState('')
   const [letter, setLetter] = useState<LetterFilter>('all')
+  const [favoriteIds, setFavoriteIds] = useState(
+    () => new Set(extras.favoriteSongIds),
+  )
+  const [rowError, setRowError] = useState<string | null>(null)
+  const [previewPlaylists, setPreviewPlaylists] = useState(extras.playlists)
+
+  useEffect(() => {
+    setFavoriteIds(new Set(extras.favoriteSongIds))
+    setPreviewPlaylists(extras.playlists)
+  }, [extras])
+
+  const refreshPreview = () => {
+    if (!user) return
+    void listPlaylists(createClient(), user.userId, {
+      limit: HOME_PLAYLIST_PREVIEW_LIMIT,
+    })
+      .then(setPreviewPlaylists)
+      .catch(() => {})
+  }
 
   const filtered = useMemo(() => {
     const trimmed = query.trim()
     return songs.filter(
-      (song) => matchesSearch(song, trimmed) && matchesLetter(song, letter),
+      (song) => matchesSongSearch(song, trimmed) && matchesLetter(song, letter),
     )
   }, [songs, query, letter])
+
+  const setFavorite = (songId: string, favorited: boolean) => {
+    setRowError(null)
+    setFavoriteIds((prev) => {
+      const next = new Set(prev)
+      if (favorited) next.add(songId)
+      else next.delete(songId)
+      return next
+    })
+  }
 
   const hasFilters = query.trim().length > 0 || letter !== 'all'
 
@@ -84,6 +127,14 @@ function SongIndex() {
           </div>
         ) : null}
       </header>
+
+      {user ? <PlaylistPreview playlists={previewPlaylists} /> : null}
+
+      {rowError ? (
+        <p className="song-form__error" role="alert">
+          {rowError}
+        </p>
+      ) : null}
 
       {songs.length === 0 ? (
         <p className="empty-state">
@@ -145,13 +196,9 @@ function SongIndex() {
             </p>
           ) : (
             <ul className="song-list">
-              {filtered.map((song) => (
-                <li key={song.id}>
-                  <Link
-                    to="/songs/$username/$slug"
-                    params={{ username: song.username, slug: song.slug }}
-                    className="song-list__link"
-                  >
+              {filtered.map((song) => {
+                const details = (
+                  <>
                     <span className="song-list__title">{song.title}</span>
                     <span className="song-list__meta">
                       {song.artist || 'Unknown artist'}
@@ -164,13 +211,97 @@ function SongIndex() {
                         · {song.originalKey}
                       </span>
                     </span>
-                  </Link>
-                </li>
-              ))}
+                  </>
+                )
+                if (!user) {
+                  return (
+                    <li key={song.id}>
+                      <Link
+                        to="/songs/$username/$slug"
+                        params={{ username: song.username, slug: song.slug }}
+                        className="song-list__link"
+                      >
+                        {details}
+                      </Link>
+                    </li>
+                  )
+                }
+                return (
+                  <li key={song.id} className="song-list__item">
+                    <article className="song-list__card song-list__card--row">
+                      <Link
+                        to="/songs/$username/$slug"
+                        params={{ username: song.username, slug: song.slug }}
+                        className="song-list__main"
+                      >
+                        {details}
+                      </Link>
+                      <div
+                        className="song-list__quick-actions"
+                        role="group"
+                        aria-label={`Actions for ${song.title}`}
+                      >
+                        <FavoriteStarButton
+                          userId={user.userId}
+                          songId={song.id}
+                          songTitle={song.title}
+                          favorited={favoriteIds.has(song.id)}
+                          onChange={(fav) => setFavorite(song.id, fav)}
+                          onError={setRowError}
+                        />
+                        <AddToPlaylistButton
+                          userId={user.userId}
+                          songId={song.id}
+                          songTitle={song.title}
+                          onChange={refreshPreview}
+                        />
+                      </div>
+                    </article>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </>
       )}
     </main>
+  )
+}
+
+function PlaylistPreview({
+  playlists,
+}: {
+  playlists: HomeExtras['playlists']
+}) {
+  return (
+    <section
+      className="playlist-preview"
+      aria-labelledby="playlist-preview-title"
+    >
+      <div className="playlist-preview__head">
+        <h2 id="playlist-preview-title">Your playlists</h2>
+        {playlists.length > 0 ? (
+          <Link to="/playlists" className="playlist-preview__all">
+            See all
+          </Link>
+        ) : null}
+      </div>
+      {playlists.length === 0 ? (
+        <Link to="/playlists" className="playlist-preview__empty">
+          <span className="playlist-preview__empty-plus" aria-hidden="true">
+            +
+          </span>
+          Create your first playlist
+        </Link>
+      ) : (
+        <ul className="playlist-preview__list">
+          {playlists.map((playlist) => (
+            <li key={playlist.id}>
+              <PlaylistCard playlist={playlist} compact />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
