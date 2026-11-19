@@ -4,6 +4,7 @@ import {
   clampTextScale,
   collectChords,
   linesPerPageForHeight,
+  loadResolvedViewerPrefs,
   loadSwipeDirection,
   loadTextScale,
   loadViewerColors,
@@ -12,6 +13,8 @@ import {
   saveViewerColors,
   sheetColorStyle,
   tidyBlocks,
+  updateUserSettings,
+  upsertSongSettings,
   SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
   listFavorites,
@@ -25,6 +28,7 @@ import {
   type SheetColors,
   type SongStatus,
   type SwipeDirection,
+  type UserSettingsRow,
   type ViewMode,
 } from '#/lib/songbook'
 import { createClient } from '#/lib/supabase/client'
@@ -84,12 +88,16 @@ export function SongViewer({
   const [favoritesLoading, setFavoritesLoading] = useState(showPlaylist)
   const [favoriteBusy, setFavoriteBusy] = useState(false)
   const [favoriteError, setFavoriteError] = useState<string | null>(null)
+  const [prefsError, setPrefsError] = useState<string | null>(null)
+  const [userSettings, setUserSettings] = useState<UserSettingsRow | null>(null)
+  const userSettingsRef = useRef<UserSettingsRow | null>(null)
 
   const isFavorited = Boolean(
     songId && favorites.some((f) => f.songId === songId),
   )
 
   pageRef.current = page
+  userSettingsRef.current = userSettings
 
   useEffect(() => {
     if (!userId || !songId) {
@@ -136,25 +144,94 @@ export function SongViewer({
     return () => ro.disconnect()
   }, [])
 
-  // Viewer preferences live in localStorage; read after mount so SSR and
-  // first client render match.
+  // Colors stay local. Swipe/text: guests use localStorage; signed-in users
+  // load from Supabase (global or per-song when enabled).
   useEffect(() => {
-    setTextScale(loadTextScale())
-    setSwipeDirection(loadSwipeDirection())
     setColorOverride(loadViewerColors())
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setPrefsError(null)
+
+    if (!userId) {
+      setUserSettings(null)
+      setTextScale(loadTextScale())
+      setSwipeDirection(loadSwipeDirection())
+      return
+    }
+
+    void (async () => {
+      try {
+        const supabase = createClient()
+        const resolved = await loadResolvedViewerPrefs(supabase, userId, songId)
+        if (cancelled) return
+        setUserSettings(resolved.global)
+        setTextScale(resolved.effective.textScale)
+        setSwipeDirection(resolved.effective.swipeDirection)
+      } catch (err) {
+        if (cancelled) return
+        setPrefsError(
+          err instanceof Error ? err.message : 'Could not load viewer settings',
+        )
+        setTextScale(loadTextScale())
+        setSwipeDirection(loadSwipeDirection())
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, songId])
+
+  const persistViewerPref = async (patch: {
+    textScale?: number
+    swipeDirection?: SwipeDirection
+  }) => {
+    if (!userId) {
+      if (patch.textScale != null) saveTextScale(patch.textScale)
+      if (patch.swipeDirection != null) saveSwipeDirection(patch.swipeDirection)
+      return
+    }
+
+    const settings = userSettingsRef.current
+    const rememberPerSong = settings?.rememberPerSong ?? false
+    setPrefsError(null)
+
+    try {
+      const supabase = createClient()
+      if (rememberPerSong && songId) {
+        const result = await upsertSongSettings(supabase, userId, songId, patch)
+        if (result.error) {
+          setPrefsError(result.error.message)
+        }
+        return
+      }
+
+      const result = await updateUserSettings(supabase, userId, patch)
+      if (result.error) {
+        setPrefsError(result.error.message)
+        return
+      }
+      if (result.data) setUserSettings(result.data)
+    } catch (err) {
+      setPrefsError(
+        err instanceof Error ? err.message : 'Could not save viewer settings',
+      )
+    }
+  }
 
   const onTextScaleChange = (next: number) => {
     const clamped = clampTextScale(next)
     setTextScale(clamped)
-    saveTextScale(clamped)
     goToPage(0, 'instant')
+    void persistViewerPref({ textScale: clamped })
   }
 
   const onSwipeDirectionChange = (next: SwipeDirection) => {
     if (next === swipeDirection) return
     setSwipeDirection(next)
-    saveSwipeDirection(next)
+    void persistViewerPref({ swipeDirection: next })
   }
 
   const updateColorOverride = (next: SheetColors) => {
@@ -402,6 +479,12 @@ export function SongViewer({
       {favoriteError ? (
         <p className="playlist-error no-print" role="status">
           {favoriteError}
+        </p>
+      ) : null}
+
+      {prefsError ? (
+        <p className="playlist-error no-print" role="status">
+          {prefsError}
         </p>
       ) : null}
 

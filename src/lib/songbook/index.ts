@@ -5,6 +5,7 @@ export * from './chords'
 export * from './colors'
 export * from './paginate'
 export * from './view-prefs'
+export * from './user-settings'
 export * from './songs'
 export * from './playlist'
 export {

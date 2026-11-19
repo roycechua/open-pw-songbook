@@ -110,6 +110,7 @@ export function AppNav({ user }: AppNavProps) {
 
   const onDiscover = pathname === '/'
   const onMySongs = pathname.startsWith('/my')
+  const onSettings = pathname.startsWith('/settings')
   const onLogin = pathname.startsWith('/login')
   const onSignup = pathname.startsWith('/signup')
 
@@ -146,6 +147,14 @@ export function AppNav({ user }: AppNavProps) {
                 <Link to="/songs/new" className="btn btn--primary btn--sm">
                   Add song
                 </Link>
+                <Link
+                  to="/settings"
+                  className={
+                    onSettings ? 'app-nav__link is-active' : 'app-nav__link'
+                  }
+                >
+                  Settings
+                </Link>
                 <span className="app-nav__user" title={user.email}>
                   {user.username ? `@${user.username}` : user.email}
                 </span>
@@ -171,9 +180,21 @@ export function AppNav({ user }: AppNavProps) {
             )}
           </div>
           {user ? (
-            <span className="app-nav__user app-nav__user--mobile">
-              {user.username ? `@${user.username}` : user.email}
-            </span>
+            <div className="app-nav__mobile-meta">
+              <Link
+                to="/settings"
+                className={
+                  onSettings
+                    ? 'app-nav__link app-nav__link--mobile is-active'
+                    : 'app-nav__link app-nav__link--mobile'
+                }
+              >
+                Settings
+              </Link>
+              <span className="app-nav__user app-nav__user--mobile">
+                {user.username ? `@${user.username}` : user.email}
+              </span>
+            </div>
           ) : null}
         </nav>
       </header>
