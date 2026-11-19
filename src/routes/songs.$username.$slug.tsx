@@ -5,7 +5,13 @@ import { APP_NAME } from '#/lib/brand'
 import { loadSongClient } from '#/lib/songbook/song-client'
 import { loadSongByUsernameSlug } from '#/lib/songbook/song-server'
 
+type SongSearch = { playlist?: string }
+
 export const Route = createFileRoute('/songs/$username/$slug')({
+  validateSearch: (search: Record<string, unknown>): SongSearch =>
+    typeof search.playlist === 'string' && search.playlist
+      ? { playlist: search.playlist }
+      : {},
   loader: async ({ params }) => {
     // SSR / first load: server function. Client navigations: direct to Supabase.
     const data =
@@ -34,6 +40,7 @@ export const Route = createFileRoute('/songs/$username/$slug')({
 function SongPage() {
   const { meta, parsed, isOwner } = Route.useLoaderData()
   const { user } = Route.useRouteContext()
+  const { playlist: playlistId } = Route.useSearch()
 
   return (
     <div
@@ -66,6 +73,7 @@ function SongPage() {
         songId={meta.id}
         songStatus={meta.status}
         userId={user?.userId ?? null}
+        playlistId={user ? (playlistId ?? null) : null}
       />
     </div>
   )

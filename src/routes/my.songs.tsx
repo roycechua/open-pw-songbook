@@ -1,5 +1,7 @@
 import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
+import { AddToPlaylistButton } from '#/components/AddToPlaylistButton'
+import { FavoriteStarButton } from '#/components/FavoriteStarButton'
 import { BusyButton, SongListSkeleton } from '#/components/loading'
 import { APP_NAME } from '#/lib/brand'
 import {
@@ -25,7 +27,11 @@ export const Route = createFileRoute('/my/songs')({
     if (!data.session) {
       throw redirect({ to: '/login' })
     }
-    return { session: data.session, songs: data.songs }
+    return {
+      session: data.session,
+      songs: data.songs,
+      favoriteSongIds: data.favoriteSongIds,
+    }
   },
   pendingComponent: () => <SongListSkeleton variant="mine" />,
   component: MySongsPage,
@@ -68,8 +74,15 @@ function IconTrash() {
 }
 
 function MySongsPage() {
-  const { session, songs: initialSongs } = Route.useLoaderData()
+  const {
+    session,
+    songs: initialSongs,
+    favoriteSongIds,
+  } = Route.useLoaderData()
   const [songs, setSongs] = useState(initialSongs)
+  const [favoriteIds, setFavoriteIds] = useState(
+    () => new Set(favoriteSongIds),
+  )
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -204,6 +217,28 @@ function MySongsPage() {
                     role="group"
                     aria-label={`Actions for ${song.title}`}
                   >
+                    {song.status === 'published' ? (
+                      <FavoriteStarButton
+                        userId={session.userId}
+                        songId={song.id}
+                        songTitle={song.title}
+                        favorited={favoriteIds.has(song.id)}
+                        onChange={(fav) =>
+                          setFavoriteIds((prev) => {
+                            const next = new Set(prev)
+                            if (fav) next.add(song.id)
+                            else next.delete(song.id)
+                            return next
+                          })
+                        }
+                        onError={setError}
+                      />
+                    ) : null}
+                    <AddToPlaylistButton
+                      userId={session.userId}
+                      songId={song.id}
+                      songTitle={song.title}
+                    />
                     <Link
                       to="/songs/$username/$slug/edit"
                       params={{ username: song.username, slug: song.slug }}

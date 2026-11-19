@@ -17,6 +17,7 @@ import {
   upsertSongSettings,
   SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
+  getPlaylistWithSongs,
   listFavorites,
   paginateBlocks,
   removeFavorite,
@@ -24,6 +25,7 @@ import {
   transposeParsedSong,
   type ChartInstrument,
   type ParsedSong,
+  type PlaylistDetail,
   type PlaylistFavorite,
   type SheetColors,
   type SongStatus,
@@ -32,10 +34,12 @@ import {
   type ViewMode,
 } from '#/lib/songbook'
 import { createClient } from '#/lib/supabase/client'
+import { AddToPlaylistButton } from './AddToPlaylistButton'
 import { ChordChartsStrip } from './ChordChartsStrip'
 import {
   PlaylistSidebar,
   useCoarsePointer,
+  type SidebarSong,
 } from './PlaylistSidebar'
 import { SongSheet } from './SongSheet'
 import { ViewerToolbar } from './ViewerToolbar'
@@ -49,6 +53,8 @@ type Props = {
   songId?: string
   songStatus?: SongStatus
   userId?: string | null
+  /** When set, the sidebar shows this playlist instead of favorites. */
+  playlistId?: string | null
 }
 
 export function SongViewer({
@@ -59,6 +65,7 @@ export function SongViewer({
   songId,
   songStatus,
   userId = null,
+  playlistId = null,
 }: Props) {
   const [currentKey, setCurrentKey] = useState(parsed.key || originalKey)
   const [mode, setMode] = useState<ViewMode>('chords')
@@ -91,6 +98,13 @@ export function SongViewer({
   const [prefsError, setPrefsError] = useState<string | null>(null)
   const [userSettings, setUserSettings] = useState<UserSettingsRow | null>(null)
   const userSettingsRef = useRef<UserSettingsRow | null>(null)
+
+  const [playlist, setPlaylist] = useState<PlaylistDetail | null>(null)
+  const [playlistLoading, setPlaylistLoading] = useState(
+    Boolean(userId && playlistId),
+  )
+  const [playlistNotice, setPlaylistNotice] = useState<string | null>(null)
+  const [playlistReload, setPlaylistReload] = useState(0)
 
   const isFavorited = Boolean(
     songId && favorites.some((f) => f.songId === songId),
@@ -131,6 +145,40 @@ export function SongViewer({
       cancelled = true
     }
   }, [userId, songId])
+
+  useEffect(() => {
+    if (!userId || !playlistId) {
+      setPlaylist(null)
+      setPlaylistLoading(false)
+      setPlaylistNotice(null)
+      return
+    }
+
+    let cancelled = false
+    setPlaylistLoading(true)
+
+    void (async () => {
+      try {
+        const row = await getPlaylistWithSongs(createClient(), playlistId)
+        if (cancelled) return
+        setPlaylist(row)
+        setPlaylistNotice(
+          row ? null : 'That playlist is unavailable — showing favorites.',
+        )
+      } catch {
+        if (!cancelled) {
+          setPlaylist(null)
+          setPlaylistNotice('Could not load playlist — showing favorites.')
+        }
+      } finally {
+        if (!cancelled) setPlaylistLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, playlistId, playlistReload])
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -418,16 +466,55 @@ export function SongViewer({
   const hasPrev = page > 0
   const hasNext = page < pages.length - 1
 
+  // A requested playlist owns the sidebar while it loads; fall back to
+  // favorites only once it is known to be unavailable.
+  const usePlaylistSidebar = Boolean(
+    playlistId && (playlist || playlistLoading),
+  )
+  const sidebarItems: SidebarSong[] = usePlaylistSidebar
+    ? (playlist?.songs ?? []).map((s) => ({
+        key: s.songId,
+        songId: s.songId,
+        title: s.title,
+        artist: s.artist,
+        username: s.username,
+        slug: s.slug,
+      }))
+    : favorites.map((f) => ({
+        key: f.id,
+        songId: f.songId,
+        title: f.title,
+        artist: f.artist,
+        username: f.username,
+        slug: f.slug,
+      }))
+  const sidebarTitle = usePlaylistSidebar
+    ? (playlist?.name ?? 'Playlist')
+    : 'Favorites'
+
   return (
     <div className="song-viewer" style={sheetColorStyle(effectiveColors)}>
       {showPlaylist && songId ? (
         <PlaylistSidebar
-          favorites={favorites}
+          title={sidebarTitle}
+          items={sidebarItems}
+          emptyText={
+            usePlaylistSidebar
+              ? 'This playlist has no songs yet.'
+              : 'No favorites yet. Add a published song with the star control.'
+          }
+          peekIcon={usePlaylistSidebar ? '≡' : '★'}
+          playlistId={usePlaylistSidebar ? playlistId : null}
+          manageLink={
+            usePlaylistSidebar && playlistId
+              ? { playlistId, label: 'Edit playlist' }
+              : undefined
+          }
           currentSongId={songId}
           open={playlistOpen}
           onOpenChange={setPlaylistOpen}
           coarsePointer={coarsePointer}
-          loading={favoritesLoading}
+          loading={usePlaylistSidebar ? playlistLoading : favoritesLoading}
         />
       ) : null}
 
@@ -469,12 +556,39 @@ export function SongViewer({
                 busy: favoriteBusy,
                 onToggleFavorite: () => void onToggleFavorite(),
                 showPlaylistToggle: coarsePointer,
+                playlistToggleLabel: sidebarTitle,
                 playlistOpen,
                 onTogglePlaylist: () => setPlaylistOpen((v) => !v),
               }
             : undefined
         }
+        addToPlaylist={
+          userId && songId ? (
+            <AddToPlaylistButton
+              userId={userId}
+              songId={songId}
+              songTitle={title}
+              variant="toolbar"
+              onChange={(changedId) => {
+                if (changedId === playlistId) {
+                  setPlaylistReload((n) => n + 1)
+                }
+              }}
+            />
+          ) : null
+        }
+        backTo={
+          usePlaylistSidebar && playlistId
+            ? { playlistId, label: playlist?.name ?? 'Playlist' }
+            : undefined
+        }
       />
+
+      {playlistNotice ? (
+        <p className="playlist-error no-print" role="status">
+          {playlistNotice}
+        </p>
+      ) : null}
 
       {favoriteError ? (
         <p className="playlist-error no-print" role="status">

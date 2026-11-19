@@ -11,6 +11,24 @@ import {
   getOrCreateUserSettings,
   type UserSettingsRow,
 } from './user-settings'
+import { listFavoriteSongIds } from './playlist'
+import {
+  HOME_PLAYLIST_PREVIEW_LIMIT,
+  getPlaylistWithSongs,
+  listPlaylists,
+  type PlaylistDetail,
+  type PlaylistSummary,
+} from './playlists'
+
+export type HomeExtras = {
+  playlists: PlaylistSummary[]
+  favoriteSongIds: string[]
+}
+
+export type PlaylistLoadResult =
+  | { kind: 'unauthenticated' }
+  | { kind: 'not_found' }
+  | { kind: 'ok'; playlist: PlaylistDetail }
 
 export type SessionProfile = {
   userId: string
@@ -77,13 +95,13 @@ export const loadPublishedSongs = createServerFn({ method: 'GET' }).handler(
 export const loadMySongs = createServerFn({ method: 'GET' }).handler(
   async () => {
     if (!isSupabaseConfigured()) {
-      return { session: null as SessionProfile | null, songs: [] }
+      return { session: null as SessionProfile | null, songs: [], favoriteSongIds: [] as string[] }
     }
 
     try {
       const supabase = createClient()
       const userId = await getUserId(supabase)
-      if (!userId) return { session: null as SessionProfile | null, songs: [] }
+      if (!userId) return { session: null as SessionProfile | null, songs: [], favoriteSongIds: [] as string[] }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -91,20 +109,83 @@ export const loadMySongs = createServerFn({ method: 'GET' }).handler(
         .eq('id', userId)
         .maybeSingle()
 
-      if (!profile) return { session: null as SessionProfile | null, songs: [] }
+      if (!profile) return { session: null as SessionProfile | null, songs: [], favoriteSongIds: [] as string[] }
 
       const session: SessionProfile = {
         userId: profile.id,
         username: profile.username,
         email: profile.email,
       }
-      const songs = await listMySongs(supabase, profile.id)
-      return { session, songs }
+      const [songs, favoriteSongIds] = await Promise.all([
+        listMySongs(supabase, profile.id),
+        listFavoriteSongIds(supabase, profile.id).catch(() => []),
+      ])
+      return { session, songs, favoriteSongIds }
     } catch {
-      return { session: null as SessionProfile | null, songs: [] }
+      return { session: null as SessionProfile | null, songs: [], favoriteSongIds: [] as string[] }
     }
   },
 )
+
+/** Signed-in extras for the home screen; empty for guests. */
+export const loadHomeExtras = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<HomeExtras> => {
+    const empty: HomeExtras = { playlists: [], favoriteSongIds: [] }
+    if (!isSupabaseConfigured()) return empty
+
+    try {
+      const supabase = createClient()
+      const userId = await getUserId(supabase)
+      if (!userId) return empty
+
+      const [playlists, favoriteSongIds] = await Promise.all([
+        listPlaylists(supabase, userId, {
+          limit: HOME_PLAYLIST_PREVIEW_LIMIT,
+        }).catch(() => []),
+        listFavoriteSongIds(supabase, userId).catch(() => []),
+      ])
+      return { playlists, favoriteSongIds }
+    } catch {
+      return empty
+    }
+  },
+)
+
+export const loadPlaylists = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<{
+    userId: string | null
+    playlists: PlaylistSummary[]
+  }> => {
+    if (!isSupabaseConfigured()) return { userId: null, playlists: [] }
+
+    try {
+      const supabase = createClient()
+      const userId = await getUserId(supabase)
+      if (!userId) return { userId: null, playlists: [] }
+      return { userId, playlists: await listPlaylists(supabase, userId) }
+    } catch {
+      return { userId: null, playlists: [] }
+    }
+  },
+)
+
+export const loadPlaylist = createServerFn({ method: 'GET' })
+  .validator((data: { playlistId: string }) => data)
+  .handler(async ({ data }): Promise<PlaylistLoadResult> => {
+    if (!isSupabaseConfigured()) return { kind: 'unauthenticated' }
+
+    try {
+      const supabase = createClient()
+      const userId = await getUserId(supabase)
+      if (!userId) return { kind: 'unauthenticated' }
+
+      const playlist = await getPlaylistWithSongs(supabase, data.playlistId)
+      if (!playlist) return { kind: 'not_found' }
+      return { kind: 'ok', playlist }
+    } catch {
+      return { kind: 'not_found' }
+    }
+  })
 
 export const loadSongByUsernameSlug = createServerFn({ method: 'GET' })
   .validator((data: { username: string; slug: string }) => data)

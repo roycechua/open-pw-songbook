@@ -36,6 +36,7 @@ function BrandMark() {
 const TAB_ICONS = {
   discover: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm3.5 5.5-2 5-5 2 2-5 5-2z',
   songs: 'M9 18V6l10-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm10-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+  playlists: 'M4 6h12M4 12h12M4 18h7M17 15v6M14 18h6',
   add: 'M12 5v14M5 12h14',
   login: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3',
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
@@ -110,6 +111,7 @@ export function AppNav({ user }: AppNavProps) {
 
   const onDiscover = pathname === '/'
   const onMySongs = pathname.startsWith('/my')
+  const onPlaylists = pathname.startsWith('/playlists')
   const onSettings = pathname.startsWith('/settings')
   const onLogin = pathname.startsWith('/login')
   const onSignup = pathname.startsWith('/signup')
@@ -143,6 +145,14 @@ export function AppNav({ user }: AppNavProps) {
                   }
                 >
                   My songs
+                </Link>
+                <Link
+                  to="/playlists"
+                  className={
+                    onPlaylists ? 'app-nav__link is-active' : 'app-nav__link'
+                  }
+                >
+                  Playlists
                 </Link>
                 <Link to="/songs/new" className="btn btn--primary btn--sm">
                   Add song
@@ -244,6 +254,15 @@ export function AppNav({ user }: AppNavProps) {
             >
               <TabIcon name="songs" />
               <span>My songs</span>
+            </Link>
+            <Link
+              to="/playlists"
+              className={
+                onPlaylists ? 'tabbar__item is-active' : 'tabbar__item'
+              }
+            >
+              <TabIcon name="playlists" />
+              <span>Playlists</span>
             </Link>
             <Link to="/songs/new" className="tabbar__item tabbar__item--add">
               <TabIcon name="add" />

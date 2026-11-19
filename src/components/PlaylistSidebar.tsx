@@ -1,10 +1,28 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useId, useState } from 'react'
 import { PlaylistShimmer } from '#/components/loading'
-import type { PlaylistFavorite } from '#/lib/songbook'
+
+/** Song row shown in the viewer sidebar (favorites or a custom playlist). */
+export type SidebarSong = {
+  key: string
+  songId: string
+  title: string
+  artist: string
+  username: string
+  slug: string
+}
 
 type Props = {
-  favorites: PlaylistFavorite[]
+  /** Heading, e.g. "Favorites" or the playlist name. */
+  title: string
+  items: SidebarSong[]
+  emptyText: string
+  /** Glyph on the collapsed hover rail. */
+  peekIcon: string
+  /** Set to keep `?playlist=` on sidebar links. */
+  playlistId?: string | null
+  /** Optional link under the heading (e.g. to manage the playlist). */
+  manageLink?: { playlistId: string; label: string }
   currentSongId: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -14,7 +32,12 @@ type Props = {
 }
 
 export function PlaylistSidebar({
-  favorites,
+  title,
+  items,
+  emptyText,
+  peekIcon,
+  playlistId = null,
+  manageLink,
   currentSongId,
   open,
   onOpenChange,
@@ -37,25 +60,36 @@ export function PlaylistSidebar({
         <button
           type="button"
           className="playlist-sidebar__peek"
-          aria-label="Favorites playlist (hover or focus to open)"
+          aria-label={`${title} (hover or focus to open)`}
         >
           <span className="playlist-sidebar__peek-label" aria-hidden="true">
-            ★
+            {peekIcon}
           </span>
         </button>
       ) : null}
 
       <div className="playlist-sidebar__panel" id="playlist-sidebar-panel">
         <div className="playlist-sidebar__header">
-          <h2 id={titleId} className="playlist-sidebar__title">
-            Favorites
-          </h2>
+          <div className="playlist-sidebar__heading">
+            <h2 id={titleId} className="playlist-sidebar__title">
+              {title}
+            </h2>
+            {manageLink ? (
+              <Link
+                to="/playlists/$playlistId"
+                params={{ playlistId: manageLink.playlistId }}
+                className="playlist-sidebar__manage"
+              >
+                {manageLink.label}
+              </Link>
+            ) : null}
+          </div>
           {coarsePointer ? (
             <button
               type="button"
               className="playlist-sidebar__close"
               onClick={() => onOpenChange(false)}
-              aria-label="Close favorites"
+              aria-label={`Close ${title}`}
             >
               Close
             </button>
@@ -64,23 +98,22 @@ export function PlaylistSidebar({
 
         {loading ? (
           <div aria-busy="true" aria-live="polite">
-            <span className="visually-hidden">Loading favorites</span>
+            <span className="visually-hidden">Loading {title}</span>
             <PlaylistShimmer rows={5} />
           </div>
-        ) : favorites.length === 0 ? (
-          <p className="playlist-sidebar__empty">
-            No favorites yet. Add a published song with the star control.
-          </p>
+        ) : items.length === 0 ? (
+          <p className="playlist-sidebar__empty">{emptyText}</p>
         ) : (
-          <nav aria-label="Favorite songs">
+          <nav aria-label={`${title} songs`}>
             <ul className="playlist-sidebar__list">
-              {favorites.map((fav) => {
-                const active = fav.songId === currentSongId
+              {items.map((item, index) => {
+                const active = item.songId === currentSongId
                 return (
-                  <li key={fav.id}>
+                  <li key={item.key}>
                     <Link
                       to="/songs/$username/$slug"
-                      params={{ username: fav.username, slug: fav.slug }}
+                      params={{ username: item.username, slug: item.slug }}
+                      search={playlistId ? { playlist: playlistId } : {}}
                       className={
                         active
                           ? 'playlist-sidebar__link is-active'
@@ -92,11 +125,16 @@ export function PlaylistSidebar({
                       }}
                     >
                       <span className="playlist-sidebar__song-title">
-                        {fav.title}
+                        {playlistId ? (
+                          <span className="playlist-sidebar__index">
+                            {index + 1}.
+                          </span>
+                        ) : null}
+                        {item.title}
                       </span>
                       <span className="playlist-sidebar__song-meta">
-                        @{fav.username}
-                        {fav.artist ? ` · ${fav.artist}` : ''}
+                        @{item.username}
+                        {item.artist ? ` · ${item.artist}` : ''}
                       </span>
                     </Link>
                   </li>
@@ -112,11 +150,9 @@ export function PlaylistSidebar({
 
 /** Match media for coarse / no-hover pointers (phones, tablets). */
 export function useCoarsePointer(): boolean {
-  const [coarse, setCoarse] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(hover: none), (pointer: coarse)').matches
-      : false,
-  )
+  // Start false on both server and client so hydration matches; the effect
+  // switches to the real value right after mount.
+  const [coarse, setCoarse] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(hover: none), (pointer: coarse)')
