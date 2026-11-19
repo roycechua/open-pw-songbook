@@ -5,12 +5,23 @@ import {
   listMySongs,
   listPublishedSongs,
 } from './songs'
-import type { SessionProfile } from './song-server'
+import type {
+  HomeExtras,
+  PlaylistLoadResult,
+  SessionProfile,
+} from './song-server'
 import type { SongListItem } from './types'
 import {
   getOrCreateUserSettings,
   type UserSettingsRow,
 } from './user-settings'
+import { listFavoriteSongIds } from './playlist'
+import {
+  HOME_PLAYLIST_PREVIEW_LIMIT,
+  getPlaylistWithSongs,
+  listPlaylists,
+  type PlaylistSummary,
+} from './playlists'
 
 /**
  * Browser-side equivalents of the loaders in `song-server.ts`.
@@ -41,8 +52,13 @@ export async function loadPublishedSongsClient(): Promise<SongListItem[]> {
 export async function loadMySongsClient(): Promise<{
   session: SessionProfile | null
   songs: SongListItem[]
+  favoriteSongIds: string[]
 }> {
-  const empty = { session: null as SessionProfile | null, songs: [] }
+  const empty = {
+    session: null as SessionProfile | null,
+    songs: [],
+    favoriteSongIds: [],
+  }
   if (!isSupabaseConfigured()) return empty
 
   try {
@@ -50,13 +66,14 @@ export async function loadMySongsClient(): Promise<{
     const userId = await getSessionUserId(supabase)
     if (!userId) return empty
 
-    const [{ data: profile }, songs] = await Promise.all([
+    const [{ data: profile }, songs, favoriteSongIds] = await Promise.all([
       supabase
         .from('profiles')
         .select('id, username, email')
         .eq('id', userId)
         .maybeSingle(),
       listMySongs(supabase, userId),
+      listFavoriteSongIds(supabase, userId).catch(() => []),
     ])
     if (!profile) return empty
 
@@ -67,9 +84,65 @@ export async function loadMySongsClient(): Promise<{
         email: profile.email,
       },
       songs,
+      favoriteSongIds,
     }
   } catch {
     return empty
+  }
+}
+
+export async function loadHomeExtrasClient(): Promise<HomeExtras> {
+  const empty: HomeExtras = { playlists: [], favoriteSongIds: [] }
+  if (!isSupabaseConfigured()) return empty
+
+  try {
+    const supabase = createClient()
+    const userId = await getSessionUserId(supabase)
+    if (!userId) return empty
+
+    const [playlists, favoriteSongIds] = await Promise.all([
+      listPlaylists(supabase, userId, {
+        limit: HOME_PLAYLIST_PREVIEW_LIMIT,
+      }).catch(() => []),
+      listFavoriteSongIds(supabase, userId).catch(() => []),
+    ])
+    return { playlists, favoriteSongIds }
+  } catch {
+    return empty
+  }
+}
+
+export async function loadPlaylistsClient(): Promise<{
+  userId: string | null
+  playlists: PlaylistSummary[]
+}> {
+  if (!isSupabaseConfigured()) return { userId: null, playlists: [] }
+
+  try {
+    const supabase = createClient()
+    const userId = await getSessionUserId(supabase)
+    if (!userId) return { userId: null, playlists: [] }
+    return { userId, playlists: await listPlaylists(supabase, userId) }
+  } catch {
+    return { userId: null, playlists: [] }
+  }
+}
+
+export async function loadPlaylistClient(
+  playlistId: string,
+): Promise<PlaylistLoadResult> {
+  if (!isSupabaseConfigured()) return { kind: 'unauthenticated' }
+
+  try {
+    const supabase = createClient()
+    const userId = await getSessionUserId(supabase)
+    if (!userId) return { kind: 'unauthenticated' }
+
+    const playlist = await getPlaylistWithSongs(supabase, playlistId)
+    if (!playlist) return { kind: 'not_found' }
+    return { kind: 'ok', playlist }
+  } catch {
+    return { kind: 'not_found' }
   }
 }
 

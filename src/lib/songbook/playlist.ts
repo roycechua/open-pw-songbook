@@ -76,6 +76,21 @@ export async function listFavorites(
     .filter((row): row is PlaylistFavorite => row != null)
 }
 
+/** Song ids in the user's favorites (for star state in lists). */
+export async function listFavoriteSongIds(
+  supabase: SongbookClient,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('playlist_items')
+    .select('song_id')
+    .eq('user_id', userId)
+  if (error) {
+    throw new Error(error.message)
+  }
+  return (data ?? []).map((row) => row.song_id)
+}
+
 /** Whether the song is already in the user's favorites. */
 export async function isFavorite(
   supabase: SongbookClient,
