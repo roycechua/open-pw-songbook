@@ -7,6 +7,10 @@ import {
 } from './songs'
 import type { SessionProfile } from './song-server'
 import type { SongListItem } from './types'
+import {
+  getOrCreateUserSettings,
+  type UserSettingsRow,
+} from './user-settings'
 
 /**
  * Browser-side equivalents of the loaders in `song-server.ts`.
@@ -84,5 +88,43 @@ export async function loadSongClient(username: string, slug: string) {
     return { ...parsed, isOwner }
   } catch {
     return null
+  }
+}
+
+export async function loadUserSettingsClient(): Promise<{
+  session: SessionProfile | null
+  settings: UserSettingsRow | null
+}> {
+  const empty = {
+    session: null as SessionProfile | null,
+    settings: null as UserSettingsRow | null,
+  }
+  if (!isSupabaseConfigured()) return empty
+
+  try {
+    const supabase = createClient()
+    const userId = await getSessionUserId(supabase)
+    if (!userId) return empty
+
+    const [{ data: profile }, settings] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, username, email')
+        .eq('id', userId)
+        .maybeSingle(),
+      getOrCreateUserSettings(supabase, userId),
+    ])
+    if (!profile) return empty
+
+    return {
+      session: {
+        userId: profile.id,
+        username: profile.username,
+        email: profile.email,
+      },
+      settings,
+    }
+  } catch {
+    return empty
   }
 }

@@ -10,6 +10,7 @@ import {
   TEXT_SCALE_STEP,
   type ChartInstrument,
   type SheetColors,
+  type SwipeDirection,
   type ViewMode,
 } from '#/lib/songbook'
 import { ColorField } from './ColorField'
@@ -47,10 +48,12 @@ type Props = {
   pageCount: number
   textScale: number
   colors: ColorControls
+  swipeDirection: SwipeDirection
   onTextScaleChange: (scale: number) => void
   onKeyChange: (key: string) => void
   onModeChange: (mode: ViewMode) => void
   onChartsChange: (charts: ChartInstrument) => void
+  onSwipeDirectionChange: (direction: SwipeDirection) => void
   onPageChange: (page: number) => void
   onPrint: () => void
   favorites?: FavoriteControls
@@ -67,10 +70,12 @@ export function ViewerToolbar({
   pageCount,
   textScale,
   colors,
+  swipeDirection,
   onTextScaleChange,
   onKeyChange,
   onModeChange,
   onChartsChange,
+  onSwipeDirectionChange,
   onPageChange,
   onPrint,
   favorites,
@@ -188,6 +193,40 @@ export function ViewerToolbar({
             onClick={() => onModeChange('lyrics')}
           >
             Lyrics
+          </button>
+        </div>
+
+        <div
+          className="control segment segment--swipe"
+          role="group"
+          aria-label="Swipe direction"
+        >
+          <button
+            type="button"
+            className={swipeDirection === 'horizontal' ? 'is-active' : undefined}
+            aria-pressed={swipeDirection === 'horizontal'}
+            aria-label="Swipe horizontally"
+            title="Swipe horizontally"
+            onClick={() => onSwipeDirectionChange('horizontal')}
+          >
+            <span className="swipe-dir-glyph" aria-hidden="true">
+              ‹ ›
+            </span>
+          </button>
+          <button
+            type="button"
+            className={swipeDirection === 'vertical' ? 'is-active' : undefined}
+            aria-pressed={swipeDirection === 'vertical'}
+            aria-label="Swipe vertically"
+            title="Swipe vertically"
+            onClick={() => onSwipeDirectionChange('vertical')}
+          >
+            <span
+              className="swipe-dir-glyph swipe-dir-glyph--vertical"
+              aria-hidden="true"
+            >
+              ‹ ›
+            </span>
           </button>
         </div>
 

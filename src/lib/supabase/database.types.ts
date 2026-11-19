@@ -28,6 +28,22 @@ export type PlaylistItem = {
   created_at: string
 }
 
+export type UserSettings = {
+  user_id: string
+  text_scale: number
+  swipe_direction: 'horizontal' | 'vertical'
+  remember_per_song: boolean
+  updated_at: string
+}
+
+export type UserSongSettings = {
+  user_id: string
+  song_id: string
+  text_scale: number | null
+  swipe_direction: 'horizontal' | 'vertical' | null
+  updated_at: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -109,6 +125,65 @@ export type Database = {
           },
           {
             foreignKeyName: 'playlist_items_song_id_fkey'
+            columns: ['song_id']
+            isOneToOne: false
+            referencedRelation: 'songs'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      user_settings: {
+        Row: UserSettings
+        Insert: {
+          user_id: string
+          text_scale?: number
+          swipe_direction?: 'horizontal' | 'vertical'
+          remember_per_song?: boolean
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          text_scale?: number
+          swipe_direction?: 'horizontal' | 'vertical'
+          remember_per_song?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_settings_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: true
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      user_song_settings: {
+        Row: UserSongSettings
+        Insert: {
+          user_id: string
+          song_id: string
+          text_scale?: number | null
+          swipe_direction?: 'horizontal' | 'vertical' | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          song_id?: string
+          text_scale?: number | null
+          swipe_direction?: 'horizontal' | 'vertical' | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_song_settings_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'user_song_settings_song_id_fkey'
             columns: ['song_id']
             isOneToOne: false
             referencedRelation: 'songs'

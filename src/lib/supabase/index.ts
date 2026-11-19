@@ -7,7 +7,15 @@
  * - `#/lib/supabase/admin` — service-role scripts only
  */
 
-export type { Database, Profile, Song, SongStatus, PlaylistItem } from './database.types'
+export type {
+  Database,
+  Profile,
+  Song,
+  SongStatus,
+  PlaylistItem,
+  UserSettings,
+  UserSongSettings,
+} from './database.types'
 export {
   USERNAME_PATTERN,
   normalizeUsername,
