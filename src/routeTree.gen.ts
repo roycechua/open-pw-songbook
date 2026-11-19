@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as MySongsRouteImport } from './routes/my.songs'
@@ -38,6 +39,11 @@ const LoginRoute = LoginRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/my/songs': typeof MySongsRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/settings'
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/settings'
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/settings'
     | '/signup'
     | '/auth/callback'
     | '/my/songs'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   MySongsRoute: typeof MySongsRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   MySongsRoute: MySongsRoute,

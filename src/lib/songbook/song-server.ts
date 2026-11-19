@@ -7,6 +7,10 @@ import {
   listMySongs,
   listPublishedSongs,
 } from './songs'
+import {
+  getOrCreateUserSettings,
+  type UserSettingsRow,
+} from './user-settings'
 
 export type SessionProfile = {
   userId: string
@@ -157,3 +161,39 @@ export const loadSongForEdit = createServerFn({ method: 'GET' })
       return { kind: 'unauthenticated' as const }
     }
   })
+
+export const loadUserSettings = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<{
+    session: SessionProfile | null
+    settings: UserSettingsRow | null
+  }> => {
+    const empty = {
+      session: null as SessionProfile | null,
+      settings: null as UserSettingsRow | null,
+    }
+    if (!isSupabaseConfigured()) return empty
+
+    try {
+      const supabase = createClient()
+      const userId = await getUserId(supabase)
+      if (!userId) return empty
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, username, email')
+        .eq('id', userId)
+        .maybeSingle()
+      if (!profile) return empty
+
+      const session: SessionProfile = {
+        userId: profile.id,
+        username: profile.username,
+        email: profile.email,
+      }
+      const settings = await getOrCreateUserSettings(supabase, profile.id)
+      return { session, settings }
+    } catch {
+      return empty
+    }
+  },
+)

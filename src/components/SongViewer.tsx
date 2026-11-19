@@ -4,12 +4,18 @@ import {
   clampTextScale,
   collectChords,
   linesPerPageForHeight,
+  loadResolvedViewerPrefs,
+  loadSwipeDirection,
   loadTextScale,
   loadViewerColors,
+  saveSwipeDirection,
   saveTextScale,
   saveViewerColors,
   sheetColorStyle,
   tidyBlocks,
+  updateUserSettings,
+  upsertSongSettings,
+  SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
   listFavorites,
   paginateBlocks,
@@ -21,6 +27,8 @@ import {
   type PlaylistFavorite,
   type SheetColors,
   type SongStatus,
+  type SwipeDirection,
+  type UserSettingsRow,
   type ViewMode,
 } from '#/lib/songbook'
 import { createClient } from '#/lib/supabase/client'
@@ -57,12 +65,18 @@ export function SongViewer({
   const [charts, setCharts] = useState<ChartInstrument>('off')
   const [page, setPage] = useState(0)
   const [textScale, setTextScale] = useState(TEXT_SCALE_DEFAULT)
+  const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(
+    SWIPE_DIRECTION_DEFAULT,
+  )
   const [colorOverride, setColorOverride] = useState<SheetColors>({})
   const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
   const scrollerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef(0)
+  const swipeDirectionRef = useRef(swipeDirection)
   const ignoreScrollRef = useRef(false)
   const ignoreScrollTimer = useRef<number | null>(null)
+  const verticalSwipe = swipeDirection === 'vertical'
+  swipeDirectionRef.current = swipeDirection
 
   const showPlaylist = Boolean(userId && songId)
   const canFavorite = Boolean(
@@ -74,12 +88,16 @@ export function SongViewer({
   const [favoritesLoading, setFavoritesLoading] = useState(showPlaylist)
   const [favoriteBusy, setFavoriteBusy] = useState(false)
   const [favoriteError, setFavoriteError] = useState<string | null>(null)
+  const [prefsError, setPrefsError] = useState<string | null>(null)
+  const [userSettings, setUserSettings] = useState<UserSettingsRow | null>(null)
+  const userSettingsRef = useRef<UserSettingsRow | null>(null)
 
   const isFavorited = Boolean(
     songId && favorites.some((f) => f.songId === songId),
   )
 
   pageRef.current = page
+  userSettingsRef.current = userSettings
 
   useEffect(() => {
     if (!userId || !songId) {
@@ -126,18 +144,94 @@ export function SongViewer({
     return () => ro.disconnect()
   }, [])
 
-  // Viewer preferences live in localStorage; read after mount so SSR and
-  // first client render match.
+  // Colors stay local. Swipe/text: guests use localStorage; signed-in users
+  // load from Supabase (global or per-song when enabled).
   useEffect(() => {
-    setTextScale(loadTextScale())
     setColorOverride(loadViewerColors())
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setPrefsError(null)
+
+    if (!userId) {
+      setUserSettings(null)
+      setTextScale(loadTextScale())
+      setSwipeDirection(loadSwipeDirection())
+      return
+    }
+
+    void (async () => {
+      try {
+        const supabase = createClient()
+        const resolved = await loadResolvedViewerPrefs(supabase, userId, songId)
+        if (cancelled) return
+        setUserSettings(resolved.global)
+        setTextScale(resolved.effective.textScale)
+        setSwipeDirection(resolved.effective.swipeDirection)
+      } catch (err) {
+        if (cancelled) return
+        setPrefsError(
+          err instanceof Error ? err.message : 'Could not load viewer settings',
+        )
+        setTextScale(loadTextScale())
+        setSwipeDirection(loadSwipeDirection())
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, songId])
+
+  const persistViewerPref = async (patch: {
+    textScale?: number
+    swipeDirection?: SwipeDirection
+  }) => {
+    if (!userId) {
+      if (patch.textScale != null) saveTextScale(patch.textScale)
+      if (patch.swipeDirection != null) saveSwipeDirection(patch.swipeDirection)
+      return
+    }
+
+    const settings = userSettingsRef.current
+    const rememberPerSong = settings?.rememberPerSong ?? false
+    setPrefsError(null)
+
+    try {
+      const supabase = createClient()
+      if (rememberPerSong && songId) {
+        const result = await upsertSongSettings(supabase, userId, songId, patch)
+        if (result.error) {
+          setPrefsError(result.error.message)
+        }
+        return
+      }
+
+      const result = await updateUserSettings(supabase, userId, patch)
+      if (result.error) {
+        setPrefsError(result.error.message)
+        return
+      }
+      if (result.data) setUserSettings(result.data)
+    } catch (err) {
+      setPrefsError(
+        err instanceof Error ? err.message : 'Could not save viewer settings',
+      )
+    }
+  }
 
   const onTextScaleChange = (next: number) => {
     const clamped = clampTextScale(next)
     setTextScale(clamped)
-    saveTextScale(clamped)
     goToPage(0, 'instant')
+    void persistViewerPref({ textScale: clamped })
+  }
+
+  const onSwipeDirectionChange = (next: SwipeDirection) => {
+    if (next === swipeDirection) return
+    setSwipeDirection(next)
+    void persistViewerPref({ swipeDirection: next })
   }
 
   const updateColorOverride = (next: SheetColors) => {
@@ -199,19 +293,31 @@ export function SongViewer({
     setPage(clamped)
     if (!el) return
 
-    const target = clamped * el.clientWidth
-    if (Math.abs(el.scrollLeft - target) < 1) return
+    const vertical = swipeDirectionRef.current === 'vertical'
+    const pageSize = vertical ? el.clientHeight : el.clientWidth
+    const current = vertical ? el.scrollTop : el.scrollLeft
+    const target = clamped * pageSize
+    if (Math.abs(current - target) < 1) return
 
     ignoreScrollRef.current = true
     if (ignoreScrollTimer.current != null) {
       window.clearTimeout(ignoreScrollTimer.current)
     }
-    el.scrollTo({ left: target, behavior })
+    el.scrollTo(
+      vertical
+        ? { top: target, left: 0, behavior }
+        : { left: target, top: 0, behavior },
+    )
 
     const release = () => {
       // Snap final position without another smooth animation
-      if (Math.abs(el.scrollLeft - target) > 0.5) {
-        el.scrollTo({ left: target, behavior: 'instant' })
+      const pos = vertical ? el.scrollTop : el.scrollLeft
+      if (Math.abs(pos - target) > 0.5) {
+        el.scrollTo(
+          vertical
+            ? { top: target, left: 0, behavior: 'instant' }
+            : { left: target, top: 0, behavior: 'instant' },
+        )
       }
       clearIgnoreScroll()
       el.removeEventListener('scrollend', release)
@@ -231,24 +337,31 @@ export function SongViewer({
     })
   }, [pages.length])
 
-  // Only correct scroll when page count/layout changes — never after swipe settle
+  // Only correct scroll when page count/layout/direction changes — never after swipe settle
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    const target = pageRef.current * el.clientWidth
-    if (Math.abs(el.scrollLeft - target) <= 1) return
+    const pageSize = verticalSwipe ? el.clientHeight : el.clientWidth
+    const target = pageRef.current * pageSize
     ignoreScrollRef.current = true
-    el.scrollTo({ left: target, behavior: 'instant' })
+    // Zero the unused axis so a direction switch doesn't leave residual scroll.
+    el.scrollTo(
+      verticalSwipe
+        ? { top: target, left: 0, behavior: 'instant' }
+        : { left: target, top: 0, behavior: 'instant' },
+    )
     ignoreScrollTimer.current = window.setTimeout(clearIgnoreScroll, 32)
-  }, [pages.length, scrollerSize.width])
+  }, [pages.length, scrollerSize.width, scrollerSize.height, verticalSwipe])
 
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
     const onScroll = () => {
       if (ignoreScrollRef.current) return
-      const w = el.clientWidth || 1
-      const next = Math.round(el.scrollLeft / w)
+      const vertical = swipeDirectionRef.current === 'vertical'
+      const pageSize = (vertical ? el.clientHeight : el.clientWidth) || 1
+      const offset = vertical ? el.scrollTop : el.scrollLeft
+      const next = Math.round(offset / pageSize)
       if (next === pageRef.current) return
       pageRef.current = next
       setPage(next)
@@ -344,6 +457,8 @@ export function SongViewer({
         }}
         onModeChange={setMode}
         onChartsChange={setCharts}
+        swipeDirection={swipeDirection}
+        onSwipeDirectionChange={onSwipeDirectionChange}
         onPageChange={(p) => goToPage(p, 'smooth')}
         onPrint={onPrint}
         favorites={
@@ -367,11 +482,18 @@ export function SongViewer({
         </p>
       ) : null}
 
+      {prefsError ? (
+        <p className="playlist-error no-print" role="status">
+          {prefsError}
+        </p>
+      ) : null}
+
       <ChordChartsStrip chords={pageChords} instrument={charts} />
 
       <div
         className={[
           'page-stage',
+          verticalSwipe ? 'page-stage--vertical' : '',
           hasPrev ? 'has-prev' : '',
           hasNext ? 'has-next' : '',
         ]
@@ -380,7 +502,9 @@ export function SongViewer({
       >
         <div
           ref={scrollerRef}
-          className="page-scroller"
+          className={
+            verticalSwipe ? 'page-scroller page-scroller--vertical' : 'page-scroller'
+          }
           aria-label="Song pages"
           style={{ ['--sheet-scale' as string]: String(textScale) }}
         >
