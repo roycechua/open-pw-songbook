@@ -2503,8 +2503,16 @@ input {
   pointer-events: auto;
 }
 
+/* Touch has no hover, so the rail stays shut until the peek is tapped.
+   The peek itself stays on the screen edge (fixed, so the 0-width rail
+   doesn't clip it). */
 .playlist-sidebar--touch {
   width: 0;
+}
+
+.playlist-sidebar--touch .playlist-sidebar__peek {
+  position: fixed;
+  z-index: 52;
 }
 
 .playlist-sidebar--touch.is-open {
@@ -2774,6 +2782,11 @@ input {
 
   .text-size__btn {
     width: auto;
+  }
+
+  .playlist-sidebar__peek {
+    width: var(--tap);
+    min-height: 5.5rem;
   }
 }
 

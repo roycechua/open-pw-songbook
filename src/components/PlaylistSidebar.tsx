@@ -66,19 +66,26 @@ export function PlaylistSidebar({
 
   return (
     <aside className={className} aria-labelledby={titleId}>
-      {!coarsePointer ? (
-        <button
-          type="button"
-          className="playlist-sidebar__peek"
-          aria-label={`${title} (hover or focus to open)`}
-          aria-expanded={open}
-          aria-controls={panelId}
-        >
-          <span className="playlist-sidebar__peek-label" aria-hidden="true">
-            {peekIcon}
-          </span>
-        </button>
-      ) : null}
+      <button
+        type="button"
+        className="playlist-sidebar__peek"
+        aria-label={
+          coarsePointer
+            ? open
+              ? `Close ${title}`
+              : `Open ${title}`
+            : `${title} (hover or focus to open)`
+        }
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={
+          coarsePointer ? () => onOpenChange(!open) : undefined
+        }
+      >
+        <span className="playlist-sidebar__peek-label" aria-hidden="true">
+          {peekIcon}
+        </span>
+      </button>
 
       <div className="playlist-sidebar__panel" id={panelId}>
         <div className="playlist-sidebar__header">
