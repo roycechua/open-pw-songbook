@@ -90,7 +90,9 @@ export function SongViewer({
     showPlaylist && songStatus === 'published',
   )
   const coarsePointer = useCoarsePointer()
-  const [playlistOpen, setPlaylistOpen] = useState(false)
+  const [openSidebar, setOpenSidebar] = useState<
+    'favorites' | 'playlist' | null
+  >(null)
   const [favorites, setFavorites] = useState<PlaylistFavorite[]>([])
   const [favoritesLoading, setFavoritesLoading] = useState(showPlaylist)
   const [favoriteBusy, setFavoriteBusy] = useState(false)
@@ -466,55 +468,79 @@ export function SongViewer({
   const hasPrev = page > 0
   const hasNext = page < pages.length - 1
 
-  // A requested playlist owns the sidebar while it loads; fall back to
-  // favorites only once it is known to be unavailable.
+  // Playlist rail is shown while a requested playlist loads; fall back to
+  // favorites-only once it is known to be unavailable.
   const usePlaylistSidebar = Boolean(
     playlistId && (playlist || playlistLoading),
   )
-  const sidebarItems: SidebarSong[] = usePlaylistSidebar
-    ? (playlist?.songs ?? []).map((s) => ({
-        key: s.songId,
-        songId: s.songId,
-        title: s.title,
-        artist: s.artist,
-        username: s.username,
-        slug: s.slug,
-      }))
-    : favorites.map((f) => ({
-        key: f.id,
-        songId: f.songId,
-        title: f.title,
-        artist: f.artist,
-        username: f.username,
-        slug: f.slug,
-      }))
-  const sidebarTitle = usePlaylistSidebar
-    ? (playlist?.name ?? 'Playlist')
-    : 'Favorites'
+  const favoriteItems: SidebarSong[] = favorites.map((f) => ({
+    key: f.id,
+    songId: f.songId,
+    title: f.title,
+    artist: f.artist,
+    username: f.username,
+    slug: f.slug,
+  }))
+  const playlistItems: SidebarSong[] = (playlist?.songs ?? []).map((s) => ({
+    key: s.songId,
+    songId: s.songId,
+    title: s.title,
+    artist: s.artist,
+    username: s.username,
+    slug: s.slug,
+  }))
+  const playlistTitle = playlist?.name ?? 'Playlist'
+  const stackedPeeks = usePlaylistSidebar
+  const toggleSidebar = (which: 'favorites' | 'playlist') => {
+    setOpenSidebar((current) => (current === which ? null : which))
+  }
+
+  useEffect(() => {
+    if (!usePlaylistSidebar && openSidebar === 'playlist') {
+      setOpenSidebar(null)
+    }
+  }, [usePlaylistSidebar, openSidebar])
 
   return (
     <div className="song-viewer" style={sheetColorStyle(effectiveColors)}>
       {showPlaylist && songId ? (
         <PlaylistSidebar
-          title={sidebarTitle}
-          items={sidebarItems}
-          emptyText={
-            usePlaylistSidebar
-              ? 'This playlist has no songs yet.'
-              : 'No favorites yet. Add a published song with the star control.'
+          title="Favorites"
+          items={favoriteItems}
+          emptyText="No favorites yet. Add a published song with the star control."
+          peekIcon="★"
+          peekStack={stackedPeeks ? 'above' : 'solo'}
+          panelId="playlist-sidebar-panel-favorites"
+          currentSongId={songId}
+          open={openSidebar === 'favorites'}
+          onOpenChange={(open) =>
+            setOpenSidebar(open ? 'favorites' : null)
           }
-          peekIcon={usePlaylistSidebar ? '≡' : '★'}
-          playlistId={usePlaylistSidebar ? playlistId : null}
+          coarsePointer={coarsePointer}
+          loading={favoritesLoading}
+        />
+      ) : null}
+      {showPlaylist && songId && usePlaylistSidebar ? (
+        <PlaylistSidebar
+          title={playlistTitle}
+          items={playlistItems}
+          emptyText="This playlist has no songs yet."
+          peekIcon="≡"
+          peekStack="below"
+          panelId="playlist-sidebar-panel-playlist"
+          playlistId={playlistId}
           manageLink={
-            usePlaylistSidebar && playlistId
+            playlistId
               ? { playlistId, label: 'Edit playlist' }
               : undefined
           }
           currentSongId={songId}
-          open={playlistOpen}
-          onOpenChange={setPlaylistOpen}
+          open={openSidebar === 'playlist'}
+          onOpenChange={(open) =>
+            setOpenSidebar(open ? 'playlist' : null)
+          }
           coarsePointer={coarsePointer}
-          loading={usePlaylistSidebar ? playlistLoading : favoritesLoading}
+          loading={playlistLoading}
         />
       ) : null}
 
@@ -555,10 +581,13 @@ export function SongViewer({
                 isFavorited,
                 busy: favoriteBusy,
                 onToggleFavorite: () => void onToggleFavorite(),
-                showPlaylistToggle: coarsePointer,
-                playlistToggleLabel: sidebarTitle,
-                playlistOpen,
-                onTogglePlaylist: () => setPlaylistOpen((v) => !v),
+                showFavoritesToggle: coarsePointer,
+                favoritesOpen: openSidebar === 'favorites',
+                onToggleFavorites: () => toggleSidebar('favorites'),
+                showPlaylistToggle: coarsePointer && usePlaylistSidebar,
+                playlistToggleLabel: playlistTitle,
+                playlistOpen: openSidebar === 'playlist',
+                onTogglePlaylist: () => toggleSidebar('playlist'),
               }
             : undefined
         }
