@@ -33,9 +33,11 @@ import {
   type UserSettingsRow,
   type ViewMode,
 } from '#/lib/songbook'
+import { useFullscreen } from '#/lib/fullscreen'
 import { createClient } from '#/lib/supabase/client'
 import { AddToPlaylistButton } from './AddToPlaylistButton'
 import { ChordChartsStrip } from './ChordChartsStrip'
+import { FullscreenExitButton } from './FullscreenControls'
 import {
   PlaylistSidebar,
   useCoarsePointer,
@@ -67,6 +69,7 @@ export function SongViewer({
   userId = null,
   playlistId = null,
 }: Props) {
+  const fullscreen = useFullscreen()
   const [currentKey, setCurrentKey] = useState(parsed.key || originalKey)
   const [mode, setMode] = useState<ViewMode>('chords')
   const [charts, setCharts] = useState<ChartInstrument>('off')
@@ -502,7 +505,12 @@ export function SongViewer({
   }, [usePlaylistSidebar, openSidebar])
 
   return (
-    <div className="song-viewer" style={sheetColorStyle(effectiveColors)}>
+    <div
+      className="song-viewer"
+      data-fullscreen={fullscreen || undefined}
+      style={sheetColorStyle(effectiveColors)}
+    >
+      {fullscreen ? <FullscreenExitButton /> : null}
       {showPlaylist && songId ? (
         <PlaylistSidebar
           title="Favorites"
