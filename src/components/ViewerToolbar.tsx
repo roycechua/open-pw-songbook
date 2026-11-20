@@ -21,9 +21,13 @@ type FavoriteControls = {
   isFavorited: boolean
   busy: boolean
   onToggleFavorite: () => void
-  /** Touch / coarse: explicit sidebar panel toggle. */
+  /** Touch / coarse: explicit favorites rail toggle. */
+  showFavoritesToggle: boolean
+  favoritesOpen: boolean
+  onToggleFavorites: () => void
+  /** Touch / coarse: explicit playlist rail toggle (when viewing from a playlist). */
   showPlaylistToggle: boolean
-  /** "Favorites" or the active playlist's name. */
+  /** Active playlist name for the playlist rail toggle. */
   playlistToggleLabel: string
   playlistOpen: boolean
   onTogglePlaylist: () => void
@@ -125,6 +129,21 @@ export function ViewerToolbar({
           <p className="viewer-artist">{artist}</p>
         </div>
         <div className="viewer-toolbar__actions">
+          {favorites?.showFavoritesToggle ? (
+            <button
+              type="button"
+              className={
+                favorites.favoritesOpen
+                  ? 'toolbar-btn is-active'
+                  : 'toolbar-btn'
+              }
+              aria-expanded={favorites.favoritesOpen}
+              aria-controls="playlist-sidebar-panel-favorites"
+              onClick={favorites.onToggleFavorites}
+            >
+              Favorites
+            </button>
+          ) : null}
           {favorites?.showPlaylistToggle ? (
             <button
               type="button"
@@ -134,7 +153,7 @@ export function ViewerToolbar({
                   : 'toolbar-btn'
               }
               aria-expanded={favorites.playlistOpen}
-              aria-controls="playlist-sidebar-panel"
+              aria-controls="playlist-sidebar-panel-playlist"
               onClick={favorites.onTogglePlaylist}
             >
               <span className="toolbar-btn__truncate">

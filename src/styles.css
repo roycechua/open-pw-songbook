@@ -9,7 +9,7 @@
    5. Song editor
    6. Viewer: toolbar, docks, popovers
    7. Viewer: sheet, pages, charts
-   8. Favorites rail
+   8. Viewer side rails
    9. Print
    10. Loading, skeletons, busy states
    11. Playlists
@@ -2228,7 +2228,7 @@ input {
   display: none;
 }
 
-/* —— 8. Favorites rail —— */
+/* —— 8. Viewer side rails (favorites + playlist) —— */
 .playlist-sidebar {
   --playlist-peek: 1.65rem;
   --playlist-width: min(18rem, 88vw);
@@ -2382,6 +2382,7 @@ input {
 .playlist-sidebar--hover:hover,
 .playlist-sidebar--hover:focus-within,
 .playlist-sidebar.is-open {
+  z-index: 51;
   width: var(--playlist-width);
   pointer-events: auto;
 }
@@ -2400,6 +2401,35 @@ input {
 .playlist-sidebar.is-open .playlist-sidebar__peek {
   opacity: 0;
   pointer-events: none;
+}
+
+.playlist-sidebar--stack-above .playlist-sidebar__peek,
+.playlist-sidebar--stack-below .playlist-sidebar__peek {
+  position: fixed;
+  z-index: 52;
+  left: 0;
+}
+
+.playlist-sidebar--stack-above .playlist-sidebar__peek {
+  top: calc(50% - 0.2rem);
+  transform: translateY(-100%);
+}
+
+.playlist-sidebar--stack-below .playlist-sidebar__peek {
+  top: calc(50% + 0.2rem);
+  transform: none;
+}
+
+/* Keep both peeks as tabs on the open panel so you can switch rails. */
+.song-viewer:has(.playlist-sidebar--hover:hover) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:focus-within) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar.is-open) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:hover) .playlist-sidebar--stack-below .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:focus-within) .playlist-sidebar--stack-below .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar.is-open) .playlist-sidebar--stack-below .playlist-sidebar__peek {
+  left: var(--playlist-width);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .playlist-sidebar--touch {

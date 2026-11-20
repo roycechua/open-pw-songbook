@@ -12,6 +12,8 @@ export type SidebarSong = {
   slug: string
 }
 
+type PeekStack = 'solo' | 'above' | 'below'
+
 type Props = {
   /** Heading, e.g. "Favorites" or the playlist name. */
   title: string
@@ -19,6 +21,10 @@ type Props = {
   emptyText: string
   /** Glyph on the collapsed hover rail. */
   peekIcon: string
+  /** Stacked peeks when both favorites and a playlist are available. */
+  peekStack?: PeekStack
+  /** Panel id for toolbar `aria-controls`. */
+  panelId?: string
   /** Set to keep `?playlist=` on sidebar links. */
   playlistId?: string | null
   /** Optional link under the heading (e.g. to manage the playlist). */
@@ -36,6 +42,8 @@ export function PlaylistSidebar({
   items,
   emptyText,
   peekIcon,
+  peekStack = 'solo',
+  panelId = 'playlist-sidebar-panel',
   playlistId = null,
   manageLink,
   currentSongId,
@@ -50,6 +58,8 @@ export function PlaylistSidebar({
     'no-print',
     open ? 'is-open' : '',
     coarsePointer ? 'playlist-sidebar--touch' : 'playlist-sidebar--hover',
+    peekStack === 'above' ? 'playlist-sidebar--stack-above' : '',
+    peekStack === 'below' ? 'playlist-sidebar--stack-below' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -61,6 +71,8 @@ export function PlaylistSidebar({
           type="button"
           className="playlist-sidebar__peek"
           aria-label={`${title} (hover or focus to open)`}
+          aria-expanded={open}
+          aria-controls={panelId}
         >
           <span className="playlist-sidebar__peek-label" aria-hidden="true">
             {peekIcon}
@@ -68,7 +80,7 @@ export function PlaylistSidebar({
         </button>
       ) : null}
 
-      <div className="playlist-sidebar__panel" id="playlist-sidebar-panel">
+      <div className="playlist-sidebar__panel" id={panelId}>
         <div className="playlist-sidebar__header">
           <div className="playlist-sidebar__heading">
             <h2 id={titleId} className="playlist-sidebar__title">
