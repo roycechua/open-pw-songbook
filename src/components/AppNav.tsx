@@ -2,7 +2,12 @@ import { Link, useRouter, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { BusyButton } from '#/components/loading'
+import {
+  FullscreenEnterButton,
+  FullscreenExitButton,
+} from '#/components/FullscreenControls'
 import { APP_NAME, APP_SHORT_NAME } from '#/lib/brand'
+import { useFullscreen } from '#/lib/fullscreen'
 import type { AuthSession } from '#/lib/supabase'
 import {
   UNVERIFIED_RESET_NOTE,
@@ -65,6 +70,8 @@ export function AppNav({ user }: AppNavProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const hideChrome = pathname.startsWith('/songs/')
 
+  const fullscreen = useFullscreen()
+
   const [busy, setBusy] = useState(false)
   const [resendNote, setResendNote] = useState<string | null>(null)
 
@@ -117,7 +124,9 @@ export function AppNav({ user }: AppNavProps) {
   const onSignup = pathname.startsWith('/signup')
 
   return (
-    <div className="app-chrome">
+    <div className="app-chrome" data-fullscreen={fullscreen || undefined}>
+      {fullscreen ? <FullscreenExitButton /> : null}
+
       <header className="app-header">
         <nav className="app-nav" aria-label="Account">
           <Link to="/" className="app-nav__brand">
@@ -188,24 +197,28 @@ export function AppNav({ user }: AppNavProps) {
                 </Link>
               </>
             )}
+            <FullscreenEnterButton className="app-nav__icon-btn" />
           </div>
-          {user ? (
-            <div className="app-nav__mobile-meta">
-              <Link
-                to="/settings"
-                className={
-                  onSettings
-                    ? 'app-nav__link app-nav__link--mobile is-active'
-                    : 'app-nav__link app-nav__link--mobile'
-                }
-              >
-                Settings
-              </Link>
-              <span className="app-nav__user app-nav__user--mobile">
-                {user.username ? `@${user.username}` : user.email}
-              </span>
-            </div>
-          ) : null}
+          <div className="app-nav__mobile-meta">
+            {user ? (
+              <>
+                <Link
+                  to="/settings"
+                  className={
+                    onSettings
+                      ? 'app-nav__link app-nav__link--mobile is-active'
+                      : 'app-nav__link app-nav__link--mobile'
+                  }
+                >
+                  Settings
+                </Link>
+                <span className="app-nav__user app-nav__user--mobile">
+                  {user.username ? `@${user.username}` : user.email}
+                </span>
+              </>
+            ) : null}
+            <FullscreenEnterButton className="app-nav__icon-btn" />
+          </div>
         </nav>
       </header>
 

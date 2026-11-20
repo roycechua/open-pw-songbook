@@ -237,7 +237,10 @@ function RowMenu({
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setOpen(false)
+      }
     }
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey)

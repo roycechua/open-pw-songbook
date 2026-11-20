@@ -14,6 +14,7 @@ import {
   type ViewMode,
 } from '#/lib/songbook'
 import { ColorField } from './ColorField'
+import { FullscreenEnterButton } from './FullscreenControls'
 
 type FavoriteControls = {
   /** Show add/remove only for published songs when logged in. */
@@ -201,6 +202,7 @@ export function ViewerToolbar({
           >
             Print
           </button>
+          <FullscreenEnterButton className="toolbar-btn toolbar-btn--fullscreen" />
         </div>
       </div>
 
