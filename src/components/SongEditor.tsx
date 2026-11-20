@@ -160,6 +160,7 @@ export function SongEditor({ session, song }: Props) {
   )
   const [baseline, setBaseline] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [busyIntent, setBusyIntent] = useState<SaveIntent | null>(null)
   const [pane, setPane] = useState<PaneMode>('write')
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -167,6 +168,8 @@ export function SongEditor({ session, song }: Props) {
 
   const editorRef = useRef<ChordProEditorHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const busyIntentRef = useRef<SaveIntent | null>(null)
+  const queuedIntentRef = useRef<SaveIntent | null>(null)
   const slugTouchedRef = useRef(mode === 'edit')
   // Prevent form→ChordPro writes from bouncing back through the parser.
   const metaSyncFromFormRef = useRef(false)
@@ -298,6 +301,13 @@ export function SongEditor({ session, song }: Props) {
 
   const save = useCallback(
     async (intent: SaveIntent) => {
+      if (busyIntentRef.current) {
+        // Saves run in the background while editing continues; a second
+        // request waits for the in-flight one, then saves the latest edits.
+        if (queuedIntentRef.current !== 'view') queuedIntentRef.current = intent
+        return
+      }
+
       setError(null)
       // Validate by hand: the details fields may be collapsed (hidden inputs
       // cannot show native validation bubbles).
@@ -316,7 +326,9 @@ export function SongEditor({ session, song }: Props) {
         return
       }
 
+      busyIntentRef.current = intent
       setBusyIntent(intent)
+      setSaveError(null)
       try {
         const supabase = createClient()
         const input = buildInput()
@@ -325,7 +337,7 @@ export function SongEditor({ session, song }: Props) {
           : await createSong(supabase, session.userId, input)
 
         if (result.error || !result.data) {
-          setError(result.error?.message ?? 'Save failed')
+          setSaveError(result.error?.message ?? 'Save failed')
           return
         }
 
@@ -339,6 +351,7 @@ export function SongEditor({ session, song }: Props) {
         })
         setBaseline(snapshot)
         setJustSaved(true)
+        slugTouchedRef.current = true
 
         if (intent === 'view') {
           void navigate({
@@ -348,24 +361,37 @@ export function SongEditor({ session, song }: Props) {
           return
         }
 
-        // Stay in the editor. Only the URL moves: new → edit route after the
-        // first save, or when the slug changed on an existing song.
+        // Stay in the editor. Only the URL moves: new → edit URL after the
+        // first save, or when the slug changed on an existing song. A router
+        // navigation would re-run the edit loader and remount the editor
+        // (skeleton, lost cursor and undo history), so only the address bar
+        // is updated.
         if (!previous || previous.slug !== next.slug) {
-          void navigate({
-            to: '/songs/$username/$slug/edit',
-            params: { username: next.username, slug: next.slug },
-            replace: true,
-          })
+          window.history.replaceState(
+            window.history.state,
+            '',
+            `/songs/${encodeURIComponent(next.username)}/${encodeURIComponent(next.slug)}/edit`,
+          )
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Save failed')
+        setSaveError(err instanceof Error ? err.message : 'Save failed')
       } finally {
+        busyIntentRef.current = null
         setBusyIntent(null)
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- buildInput reads current form state
     [chordPro, saved, session.userId, snapshot, navigate, title, artist, originalKey, slug],
   )
+
+  // Run a save requested mid-flight once the previous one has landed and
+  // `save` sees the updated song (so a first save isn't created twice).
+  useEffect(() => {
+    if (busyIntent !== null || !queuedIntentRef.current) return
+    const intent = queuedIntentRef.current
+    queuedIntentRef.current = null
+    void save(intent)
+  }, [busyIntent, save])
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -400,15 +426,23 @@ export function SongEditor({ session, song }: Props) {
 
   const dockNote = saving
     ? 'Saving…'
+    : saveError
+      ? `Couldn't save: ${saveError}`
+      : dirty
+        ? 'Unsaved changes'
+        : justSaved
+          ? saved?.status === 'published'
+            ? 'All changes saved · Published'
+            : 'All changes saved · Only you can see this draft'
+          : saved?.status === 'published'
+            ? 'Published song'
+            : 'Draft · Only you can see this'
+
+  const dockNoteClass = saveError
+    ? 'editor__dock-note is-error'
     : dirty
-      ? 'Unsaved changes'
-      : justSaved
-        ? saved?.status === 'published'
-          ? 'All changes saved · Published'
-          : 'All changes saved · Only you can see this draft'
-        : saved?.status === 'published'
-          ? 'Published song'
-          : 'Draft · Only you can see this'
+      ? 'editor__dock-note is-dirty'
+      : 'editor__dock-note'
 
   return (
     <main className="editor">
@@ -689,32 +723,20 @@ export function SongEditor({ session, song }: Props) {
 
         <div className="editor__dock">
           <div className="editor__dock-actions">
-            <BusyButton
-              type="submit"
-              className="btn btn--secondary"
-              busy={busyIntent === 'stay'}
-              busyLabel="Saving…"
-              disabled={saving}
-            >
+            <button type="submit" className="btn btn--secondary">
               {stayLabel}
-            </BusyButton>
+            </button>
             <BusyButton
               type="button"
               className="btn btn--primary"
               busy={busyIntent === 'view'}
               busyLabel="Saving…"
-              disabled={saving}
               onClick={() => void save('view')}
             >
               Save &amp; view
             </BusyButton>
           </div>
-          <p
-            className={
-              dirty ? 'editor__dock-note is-dirty' : 'editor__dock-note'
-            }
-            role="status"
-          >
+          <p className={dockNoteClass} role="status">
             {dockNote}
           </p>
         </div>

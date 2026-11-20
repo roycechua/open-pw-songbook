@@ -9,7 +9,7 @@
    5. Song editor
    6. Viewer: toolbar, docks, popovers
    7. Viewer: sheet, pages, charts
-   8. Favorites rail
+   8. Viewer side rails
    9. Print
    10. Loading, skeletons, busy states
    11. Playlists
@@ -369,23 +369,26 @@ input {
   border-bottom: 1px solid var(--border);
 }
 
+/* Links drop to their own row when they don't fit beside the brand
+   (tablets, long usernames) instead of overlapping the name. */
 .app-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.35rem 0.75rem;
   width: 100%;
   max-width: var(--content-max);
   min-height: 3.5rem;
   margin: 0 auto;
-  padding: 0 var(--page-pad);
+  padding: 0.4rem var(--page-pad);
 }
 
 .app-nav__brand {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  min-width: 0;
+  flex-shrink: 0;
   color: var(--ink);
   font-size: 1rem;
   font-weight: 700;
@@ -414,6 +417,7 @@ input {
 
 .app-nav__links {
   display: none;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.35rem 0.75rem;
@@ -454,6 +458,7 @@ input {
   color: var(--ink);
   font-size: 0.9rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .app-nav__link:hover {
@@ -487,6 +492,67 @@ input {
 .app-nav__button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.app-nav__icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.app-nav__icon-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* —— Fullscreen mode: top bar hidden, a floating button brings it back —— */
+.app-chrome[data-fullscreen] .app-header,
+.app-chrome[data-fullscreen] .verify-banner,
+.app-chrome[data-fullscreen] .app-chrome__flash,
+.song-viewer[data-fullscreen] .viewer-toolbar {
+  display: none;
+}
+
+.song-viewer[data-fullscreen] {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.fullscreen-exit {
+  appearance: none;
+  position: fixed;
+  top: calc(0.5rem + env(safe-area-inset-top, 0px));
+  right: calc(0.5rem + env(safe-area-inset-right, 0px));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-raised) 85%, transparent);
+  color: var(--muted);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+  opacity: 0.75;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+
+.fullscreen-exit:hover,
+.fullscreen-exit:focus-visible {
+  opacity: 1;
+  color: var(--accent);
 }
 
 .tabbar {
@@ -1402,6 +1468,11 @@ input {
   font-weight: 500;
 }
 
+.editor__dock-note.is-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
 .editor__dock--skeleton {
   flex-direction: row;
 }
@@ -2228,7 +2299,7 @@ input {
   display: none;
 }
 
-/* —— 8. Favorites rail —— */
+/* —— 8. Viewer side rails (favorites + playlist) —— */
 .playlist-sidebar {
   --playlist-peek: 1.65rem;
   --playlist-width: min(18rem, 88vw);
@@ -2382,6 +2453,7 @@ input {
 .playlist-sidebar--hover:hover,
 .playlist-sidebar--hover:focus-within,
 .playlist-sidebar.is-open {
+  z-index: 51;
   width: var(--playlist-width);
   pointer-events: auto;
 }
@@ -2400,6 +2472,35 @@ input {
 .playlist-sidebar.is-open .playlist-sidebar__peek {
   opacity: 0;
   pointer-events: none;
+}
+
+.playlist-sidebar--stack-above .playlist-sidebar__peek,
+.playlist-sidebar--stack-below .playlist-sidebar__peek {
+  position: fixed;
+  z-index: 52;
+  left: 0;
+}
+
+.playlist-sidebar--stack-above .playlist-sidebar__peek {
+  top: calc(50% - 0.2rem);
+  transform: translateY(-100%);
+}
+
+.playlist-sidebar--stack-below .playlist-sidebar__peek {
+  top: calc(50% + 0.2rem);
+  transform: none;
+}
+
+/* Keep both peeks as tabs on the open panel so you can switch rails. */
+.song-viewer:has(.playlist-sidebar--hover:hover) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:focus-within) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar.is-open) .playlist-sidebar--stack-above .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:hover) .playlist-sidebar--stack-below .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar--hover:focus-within) .playlist-sidebar--stack-below .playlist-sidebar__peek,
+.song-viewer:has(.playlist-sidebar.is-open) .playlist-sidebar--stack-below .playlist-sidebar__peek {
+  left: var(--playlist-width);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .playlist-sidebar--touch {
