@@ -43,6 +43,10 @@ export type UserSettings = {
   text_scale: number
   swipe_direction: 'horizontal' | 'vertical'
   remember_per_song: boolean
+  layout_density: 'comfortable' | 'compact' | 'tight'
+  sheet_columns: 'auto' | '1' | '2'
+  keep_sections: boolean
+  fit_to_page: boolean
   updated_at: string
 }
 
@@ -179,6 +183,10 @@ export type Database = {
           text_scale?: number
           swipe_direction?: 'horizontal' | 'vertical'
           remember_per_song?: boolean
+          layout_density?: 'comfortable' | 'compact' | 'tight'
+          sheet_columns?: 'auto' | '1' | '2'
+          keep_sections?: boolean
+          fit_to_page?: boolean
           updated_at?: string
         }
         Update: {
@@ -186,6 +194,10 @@ export type Database = {
           text_scale?: number
           swipe_direction?: 'horizontal' | 'vertical'
           remember_per_song?: boolean
+          layout_density?: 'comfortable' | 'compact' | 'tight'
+          sheet_columns?: 'auto' | '1' | '2'
+          keep_sections?: boolean
+          fit_to_page?: boolean
           updated_at?: string
         }
         Relationships: [

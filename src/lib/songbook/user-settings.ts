@@ -5,17 +5,33 @@ import type {
 } from '#/lib/supabase/database.types'
 import type { SongMutationResult } from './songs'
 import {
+  FIT_TO_PAGE_DEFAULT,
+  KEEP_SECTIONS_DEFAULT,
+  LAYOUT_DENSITY_DEFAULT,
+  SHEET_COLUMNS_DEFAULT,
   SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
   clampTextScale,
+  loadFitToPage,
+  loadKeepSections,
+  loadLayoutDensity,
+  loadSheetColumnsPref,
   loadSwipeDirection,
   loadTextScale,
+  parseLayoutDensity,
+  parseSheetColumnsPref,
+  type LayoutDensity,
+  type SheetColumnsPref,
   type SwipeDirection,
 } from './view-prefs'
 
 export type ViewerPrefs = {
   textScale: number
   swipeDirection: SwipeDirection
+  layoutDensity: LayoutDensity
+  sheetColumns: SheetColumnsPref
+  keepSections: boolean
+  fitToPage: boolean
 }
 
 export type UserSettingsRow = {
@@ -23,6 +39,10 @@ export type UserSettingsRow = {
   textScale: number
   swipeDirection: SwipeDirection
   rememberPerSong: boolean
+  layoutDensity: LayoutDensity
+  sheetColumns: SheetColumnsPref
+  keepSections: boolean
+  fitToPage: boolean
   updatedAt: string
 }
 
@@ -38,6 +58,10 @@ export type UserSettingsPatch = {
   textScale?: number
   swipeDirection?: SwipeDirection
   rememberPerSong?: boolean
+  layoutDensity?: LayoutDensity
+  sheetColumns?: SheetColumnsPref
+  keepSections?: boolean
+  fitToPage?: boolean
 }
 
 export type SongSettingsPatch = {
@@ -62,6 +86,10 @@ function mapUserSettings(row: UserSettings): UserSettingsRow {
     textScale: clampTextScale(Number(row.text_scale)),
     swipeDirection: parseSwipeDirection(row.swipe_direction),
     rememberPerSong: Boolean(row.remember_per_song),
+    layoutDensity: parseLayoutDensity(row.layout_density),
+    sheetColumns: parseSheetColumnsPref(row.sheet_columns),
+    keepSections: Boolean(row.keep_sections),
+    fitToPage: Boolean(row.fit_to_page),
     updatedAt: row.updated_at,
   }
 }
@@ -84,6 +112,10 @@ function localSeedDefaults(): ViewerPrefs {
   return {
     textScale: loadTextScale(),
     swipeDirection: loadSwipeDirection(),
+    layoutDensity: loadLayoutDensity(),
+    sheetColumns: loadSheetColumnsPref(),
+    keepSections: loadKeepSections(),
+    fitToPage: loadFitToPage(),
   }
 }
 
@@ -100,13 +132,19 @@ export function resolveViewerPrefs(input: {
   const base: ViewerPrefs = {
     textScale: input.global.textScale,
     swipeDirection: input.global.swipeDirection,
+    layoutDensity: input.global.layoutDensity,
+    sheetColumns: input.global.sheetColumns,
+    keepSections: input.global.keepSections,
+    fitToPage: input.global.fitToPage,
   }
 
   if (!input.global.rememberPerSong || !input.songOverride) {
     return base
   }
 
+  // Layout prefs stay global. Per-song memory covers text size and swipe only.
   return {
+    ...base,
     textScale: input.songOverride.textScale ?? base.textScale,
     swipeDirection: input.songOverride.swipeDirection ?? base.swipeDirection,
   }
@@ -138,6 +176,10 @@ export async function getOrCreateUserSettings(
       textScale: TEXT_SCALE_DEFAULT,
       swipeDirection: SWIPE_DIRECTION_DEFAULT,
       rememberPerSong: false,
+      layoutDensity: LAYOUT_DENSITY_DEFAULT,
+      sheetColumns: SHEET_COLUMNS_DEFAULT,
+      keepSections: KEEP_SECTIONS_DEFAULT,
+      fitToPage: FIT_TO_PAGE_DEFAULT,
       updatedAt: new Date(0).toISOString(),
     }
   }
@@ -150,6 +192,10 @@ export async function getOrCreateUserSettings(
       text_scale: seed.textScale,
       swipe_direction: seed.swipeDirection,
       remember_per_song: false,
+      layout_density: seed.layoutDensity,
+      sheet_columns: seed.sheetColumns,
+      keep_sections: seed.keepSections,
+      fit_to_page: seed.fitToPage,
     })
     .select('*')
     .single()
@@ -178,6 +224,10 @@ export async function updateUserSettings(
     text_scale?: number
     swipe_direction?: SwipeDirection
     remember_per_song?: boolean
+    layout_density?: LayoutDensity
+    sheet_columns?: SheetColumnsPref
+    keep_sections?: boolean
+    fit_to_page?: boolean
   } = {}
 
   if (patch.textScale != null) {
@@ -188,6 +238,18 @@ export async function updateUserSettings(
   }
   if (patch.rememberPerSong != null) {
     update.remember_per_song = patch.rememberPerSong
+  }
+  if (patch.layoutDensity != null) {
+    update.layout_density = patch.layoutDensity
+  }
+  if (patch.sheetColumns != null) {
+    update.sheet_columns = patch.sheetColumns
+  }
+  if (patch.keepSections != null) {
+    update.keep_sections = patch.keepSections
+  }
+  if (patch.fitToPage != null) {
+    update.fit_to_page = patch.fitToPage
   }
 
   if (Object.keys(update).length === 0) {
@@ -332,5 +394,9 @@ export function defaultViewerPrefs(): ViewerPrefs {
   return {
     textScale: TEXT_SCALE_DEFAULT,
     swipeDirection: SWIPE_DIRECTION_DEFAULT,
+    layoutDensity: LAYOUT_DENSITY_DEFAULT,
+    sheetColumns: SHEET_COLUMNS_DEFAULT,
+    keepSections: KEEP_SECTIONS_DEFAULT,
+    fitToPage: FIT_TO_PAGE_DEFAULT,
   }
 }

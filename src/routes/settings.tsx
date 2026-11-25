@@ -8,6 +8,8 @@ import {
   TEXT_SCALE_STEP,
   clampTextScale,
   updateUserSettings,
+  type LayoutDensity,
+  type SheetColumnsPref,
   type SwipeDirection,
   type UserSettingsRow,
 } from '#/lib/songbook'
@@ -41,6 +43,14 @@ function SettingsPage() {
   const [rememberPerSong, setRememberPerSong] = useState(
     initial.rememberPerSong,
   )
+  const [layoutDensity, setLayoutDensity] = useState<LayoutDensity>(
+    initial.layoutDensity,
+  )
+  const [sheetColumns, setSheetColumns] = useState<SheetColumnsPref>(
+    initial.sheetColumns,
+  )
+  const [keepSections, setKeepSections] = useState(initial.keepSections)
+  const [fitToPage, setFitToPage] = useState(initial.fitToPage)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedNote, setSavedNote] = useState<string | null>(null)
@@ -53,6 +63,10 @@ function SettingsPage() {
     setTextScale(row.textScale)
     setSwipeDirection(row.swipeDirection)
     setRememberPerSong(row.rememberPerSong)
+    setLayoutDensity(row.layoutDensity)
+    setSheetColumns(row.sheetColumns)
+    setKeepSections(row.keepSections)
+    setFitToPage(row.fitToPage)
   }
 
   const onSave = async () => {
@@ -65,6 +79,10 @@ function SettingsPage() {
         textScale: clampTextScale(textScale),
         swipeDirection,
         rememberPerSong,
+        layoutDensity,
+        sheetColumns,
+        keepSections,
+        fitToPage,
       })
       if (result.error || !result.data) {
         setError(result.error?.message ?? 'Could not save settings')
@@ -179,6 +197,72 @@ function SettingsPage() {
           </div>
         </fieldset>
 
+        <fieldset className="settings-fieldset">
+          <legend>Line spacing</legend>
+          <label className="control">
+            <span>Density</span>
+            <select
+              value={layoutDensity}
+              aria-label="Line spacing"
+              onChange={(e) =>
+                setLayoutDensity(e.target.value as LayoutDensity)
+              }
+            >
+              <option value="comfortable">Comfortable</option>
+              <option value="compact">Compact</option>
+              <option value="tight">Tight</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset className="settings-fieldset">
+          <legend>Columns</legend>
+          <label className="control">
+            <span>Columns</span>
+            <select
+              value={sheetColumns}
+              aria-label="Columns"
+              onChange={(e) =>
+                setSheetColumns(e.target.value as SheetColumnsPref)
+              }
+            >
+              <option value="auto">Auto</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <label className="settings-check">
+          <input
+            type="checkbox"
+            checked={keepSections}
+            onChange={(e) => setKeepSections(e.target.checked)}
+          />
+          <span>
+            <span className="settings-check__title">Keep sections together</span>
+            <span className="settings-check__help">
+              When on, a section stays in one column if it fits. When off,
+              sections can continue in the next column so the page fills.
+            </span>
+          </span>
+        </label>
+
+        <label className="settings-check">
+          <input
+            type="checkbox"
+            checked={fitToPage}
+            onChange={(e) => setFitToPage(e.target.checked)}
+          />
+          <span>
+            <span className="settings-check__title">Fit to one page</span>
+            <span className="settings-check__help">
+              Shrink text slightly, down to 85%, when that fits the whole song
+              on a single page.
+            </span>
+          </span>
+        </label>
+
         <label className="settings-check">
           <input
             type="checkbox"
@@ -188,8 +272,10 @@ function SettingsPage() {
           <span>
             <span className="settings-check__title">Remember settings per song</span>
             <span className="settings-check__help">
-              When on, changes in the song viewer apply only to that song.
-              Defaults above are used for songs without their own settings.
+              When on, text size and swipe direction in the song viewer apply
+              only to that song. Line spacing, columns, and page layout stay
+              global. Defaults above are used for songs without their own
+              settings.
             </span>
           </span>
         </label>

@@ -1729,6 +1729,16 @@ input {
   order: 3;
 }
 
+.viewer-controls > .control--density,
+.viewer-controls > .control--columns {
+  order: 3;
+}
+
+.control--density > span,
+.control--columns > span {
+  display: none;
+}
+
 .viewer-controls > .control--key {
   order: 4;
 }
@@ -2168,26 +2178,54 @@ input {
 }
 
 .song-page__inner {
+  --inner-pad-top: 0.8rem;
+  --inner-pad-continued: 1.75rem;
+  --sheet-column-gap: 2rem;
   height: 100%;
   overflow: hidden;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.8rem 1.1rem 2rem;
+  padding: var(--inner-pad-top) 1.1rem 2rem;
   box-sizing: border-box;
   box-shadow: var(--shadow);
 }
 
 .song-page--continued .song-page__inner {
-  padding-top: 1.75rem;
+  --inner-pad-top: var(--inner-pad-continued);
 }
 
 .song-sheet {
   --sheet-base: clamp(0.95rem, 2.6vw, 1.05rem);
+  /* Compact density is the default. Comfortable and tight override below. */
+  --lyric-leading: 1.22;
+  --chord-leading: 1.05;
+  --line-margin: 0.05em 0 0.16em;
+  --section-gap: 0.4em;
+  --label-margin: 0 0 0.2em;
+  --comment-margin: 0.15em 0;
   font-size: calc(var(--sheet-base) * var(--sheet-scale, 1));
   line-height: 1.15;
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+.song-sheet[data-density='comfortable'] {
+  --lyric-leading: 1.35;
+  --chord-leading: 1.15;
+  --line-margin: 0.12em 0 0.32em;
+  --section-gap: 0.6em;
+  --label-margin: 0 0 0.3em;
+  --comment-margin: 0.3em 0;
+}
+
+.song-sheet[data-density='tight'] {
+  --lyric-leading: 1.15;
+  --chord-leading: 1;
+  --line-margin: 0 0 0.08em;
+  --section-gap: 0.25em;
+  --label-margin: 0 0 0.12em;
+  --comment-margin: 0.08em 0;
 }
 
 .song-page__inner--columns {
@@ -2195,12 +2233,50 @@ input {
   flex-direction: column;
 }
 
+.song-columns {
+  min-width: 0;
+  min-height: 0;
+}
+
+.song-page__inner--columns .song-columns {
+  flex: 1;
+  height: 100%;
+}
+
+.song-columns--two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--sheet-column-gap, 2rem);
+  align-items: start;
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--border) 80%, transparent),
+    color-mix(in srgb, var(--border) 80%, transparent)
+  );
+  background-size: 1px 100%;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+.song-column {
+  min-width: 0;
+}
+
+.song-sheet-probe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Print still flows with CSS columns. Screen pages use explicit columns. */
 .song-sheet--columns {
   flex: 1;
   min-height: 0;
   height: 100%;
   column-count: 2;
-  column-gap: 2rem;
+  column-gap: var(--sheet-column-gap, 2rem);
   column-rule: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   column-fill: auto;
 }
@@ -2211,7 +2287,7 @@ input {
 
 /* One consistent, modest gap between sections */
 .song-section + .song-section {
-  margin-top: 0.7em;
+  margin-top: var(--section-gap, 0.4em);
 }
 
 .song-sheet--columns .song-section {
@@ -2231,7 +2307,7 @@ input {
 }
 
 .song-section-label {
-  margin: 0 0 0.3em;
+  margin: var(--label-margin, 0 0 0.2em);
   font-size: 0.72em;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -2240,7 +2316,7 @@ input {
 }
 
 .song-comment {
-  margin: 0.3em 0;
+  margin: var(--comment-margin, 0.15em 0);
   font-size: 0.85em;
   font-style: italic;
   /* Comments are the common way to label sections ({c: Verse 1}) */
@@ -2248,8 +2324,15 @@ input {
 }
 
 .song-line {
-  margin: 0.15em 0 0.4em;
+  margin: var(--line-margin, 0.05em 0 0.16em);
   white-space: pre-wrap;
+}
+
+.song-line--skip {
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .song-line--blank {
@@ -2283,12 +2366,12 @@ input {
   font-size: 0.82em;
   font-weight: 600;
   color: var(--chord-color, var(--chord));
-  line-height: 1.2;
-  min-height: 1.2em;
+  line-height: var(--chord-leading, 1.05);
+  min-height: calc(var(--chord-leading, 1.05) * 1em);
 }
 
 .lyric-text {
-  line-height: 1.35;
+  line-height: var(--lyric-leading, 1.22);
 }
 
 .song-line--lyrics .lyric-text {
@@ -2624,7 +2707,9 @@ input {
     order: 0;
   }
 
-  .control--key > span {
+  .control--key > span,
+  .control--density > span,
+  .control--columns > span {
     display: inline;
   }
 
@@ -2646,7 +2731,9 @@ input {
   }
 
   .song-page__inner {
-    padding: 0.9rem 1.75rem 2.5rem;
+    --inner-pad-top: 0.9rem;
+    --inner-pad-continued: 2.15rem;
+    padding: var(--inner-pad-top) 1.75rem 2.5rem;
     max-width: 56rem;
     margin: 0 auto;
   }
@@ -2656,7 +2743,7 @@ input {
   }
 
   .song-page--continued .song-page__inner {
-    padding-top: 2.15rem;
+    --inner-pad-top: var(--inner-pad-continued);
   }
 
   .song-sheet {
