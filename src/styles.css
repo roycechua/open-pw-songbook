@@ -2520,6 +2520,13 @@ input {
   pointer-events: auto;
 }
 
+/* Phones: edge peeks permanently cover lyrics. Open rails from the toolbar. */
+@media (max-width: 47.99rem) {
+  .playlist-sidebar__peek {
+    display: none;
+  }
+}
+
 /* —— Tablet and up —— */
 @media (min-width: 48rem) {
   :root {
