@@ -1,4 +1,5 @@
 import type { ParsedBlock, ViewMode } from './types'
+import type { SheetColumnsPref } from './view-prefs'
 import { lineHasContent } from './parse'
 
 /** Drop blank lines at the start of a page so section labels sit nearer the top. */
@@ -68,6 +69,16 @@ export const TWO_COLUMN_MIN_WIDTH = 700
 
 export function sheetColumnCount(scrollerWidthPx: number): 1 | 2 {
   return scrollerWidthPx >= TWO_COLUMN_MIN_WIDTH ? 2 : 1
+}
+
+/** Auto uses width. Explicit 1 or 2 overrides it. */
+export function resolveSheetColumns(
+  pref: SheetColumnsPref,
+  scrollerWidthPx: number,
+): 1 | 2 {
+  if (pref === '1') return 1
+  if (pref === '2') return 2
+  return sheetColumnCount(scrollerWidthPx)
 }
 
 type PageBudgetOptions = {
@@ -222,4 +233,158 @@ export function paginateBlocks(
 
   flush()
   return pages.length > 0 ? pages : [[]]
+}
+
+/** Smallest text scale "fit to one page" is allowed to apply. */
+export const FIT_TO_PAGE_MIN_SCALE = 0.85
+
+export type MeasuredPackOptions = {
+  /** Usable height of one column, in px. */
+  columnHeight: number
+  columns: 1 | 2
+  /** Keep a section intact when the whole section fits in one column. */
+  keepSectionsTogether: boolean
+}
+
+type PackUnit = {
+  indices: number[]
+  height: number
+}
+
+function isStickyBlock(block: ParsedBlock): boolean {
+  return block.kind === 'section' || block.kind === 'comment'
+}
+
+/** Labels and comments stay with the following content line. */
+function unitsFromLines(
+  blocks: ParsedBlock[],
+  heights: number[],
+  offset: number,
+): PackUnit[] {
+  const units: PackUnit[] = []
+  let i = 0
+  while (i < blocks.length) {
+    if (isStickyBlock(blocks[i]!)) {
+      const indices: number[] = []
+      let height = 0
+      while (i < blocks.length && isStickyBlock(blocks[i]!)) {
+        indices.push(offset + i)
+        height += heights[offset + i] ?? 0
+        i += 1
+      }
+      if (i < blocks.length) {
+        indices.push(offset + i)
+        height += heights[offset + i] ?? 0
+        i += 1
+      }
+      if (indices.length > 0) units.push({ indices, height })
+      continue
+    }
+    units.push({
+      indices: [offset + i],
+      height: heights[offset + i] ?? 0,
+    })
+    i += 1
+  }
+  return units
+}
+
+function unitsForPacking(
+  blocks: ParsedBlock[],
+  heights: number[],
+  columnHeight: number,
+  keepSectionsTogether: boolean,
+): PackUnit[] {
+  if (!keepSectionsTogether) return unitsFromLines(blocks, heights, 0)
+
+  const sections = groupIntoSections(blocks)
+  const units: PackUnit[] = []
+  let offset = 0
+  for (const section of sections) {
+    let total = 0
+    for (let i = 0; i < section.length; i += 1) {
+      total += heights[offset + i] ?? 0
+    }
+    if (total <= columnHeight) {
+      units.push({
+        indices: section.map((_, i) => offset + i),
+        height: total,
+      })
+    } else {
+      units.push(...unitsFromLines(section, heights, offset))
+    }
+    offset += section.length
+  }
+  return units
+}
+
+/**
+ * Pack measured block heights into pages of columns.
+ * Returns block indices. A section may split between lines unless
+ * `keepSectionsTogether` is set and the section fits in one column.
+ * A section label or comment stays with the next content line.
+ * A block taller than the column occupies that column by itself.
+ */
+export function packMeasuredBlocks(
+  blocks: ParsedBlock[],
+  heights: number[],
+  options: MeasuredPackOptions,
+): number[][][] {
+  const columnHeight = Math.max(0, options.columnHeight)
+  const columnCount = options.columns
+  const units = unitsForPacking(
+    blocks,
+    heights,
+    columnHeight,
+    options.keepSectionsTogether,
+  )
+
+  const pages: number[][][] = []
+  let page: number[][] = []
+  let column: number[] = []
+  let used = 0
+
+  const flushColumn = () => {
+    if (column.length === 0) return
+    page.push(column)
+    column = []
+    used = 0
+    if (page.length === columnCount) {
+      pages.push(page)
+      page = []
+    }
+  }
+
+  for (const unit of units) {
+    const fits =
+      used === 0 || used + unit.height <= columnHeight + 0.5
+    if (!fits) flushColumn()
+    column.push(...unit.indices)
+    used += unit.height
+    if (used > columnHeight + 0.5) flushColumn()
+  }
+
+  if (column.length > 0) page.push(column)
+  if (page.length > 0) pages.push(page)
+  return pages.length > 0 ? pages : [[[]]]
+}
+
+/**
+ * Scale that would fit `totalHeight` into one page, not below
+ * FIT_TO_PAGE_MIN_SCALE and not above the reader's current scale.
+ * Returns null when no shrink is worth applying.
+ */
+export function fitScaleForOverflow(
+  textScale: number,
+  totalHeight: number,
+  pageCapacity: number,
+): number | null {
+  if (!(pageCapacity > 0) || !(totalHeight > pageCapacity)) return null
+  const raw = textScale * (pageCapacity / totalHeight)
+  const target =
+    Math.round(
+      Math.max(FIT_TO_PAGE_MIN_SCALE, Math.min(textScale, raw)) * 100,
+    ) / 100
+  if (target >= textScale - 0.005) return null
+  return target
 }

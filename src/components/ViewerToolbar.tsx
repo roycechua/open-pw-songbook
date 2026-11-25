@@ -9,7 +9,9 @@ import {
   TEXT_SCALE_MIN,
   TEXT_SCALE_STEP,
   type ChartInstrument,
+  type LayoutDensity,
   type SheetColors,
+  type SheetColumnsPref,
   type SwipeDirection,
   type ViewMode,
 } from '#/lib/songbook'
@@ -54,9 +56,13 @@ type Props = {
   page: number
   pageCount: number
   textScale: number
+  layoutDensity: LayoutDensity
+  sheetColumns: SheetColumnsPref
   colors: ColorControls
   swipeDirection: SwipeDirection
   onTextScaleChange: (scale: number) => void
+  onLayoutDensityChange: (density: LayoutDensity) => void
+  onSheetColumnsChange: (columns: SheetColumnsPref) => void
   onKeyChange: (key: string) => void
   onModeChange: (mode: ViewMode) => void
   onChartsChange: (charts: ChartInstrument) => void
@@ -80,9 +86,13 @@ export function ViewerToolbar({
   page,
   pageCount,
   textScale,
+  layoutDensity,
+  sheetColumns,
   colors,
   swipeDirection,
   onTextScaleChange,
+  onLayoutDensityChange,
+  onSheetColumnsChange,
   onKeyChange,
   onModeChange,
   onChartsChange,
@@ -285,6 +295,36 @@ export function ViewerToolbar({
             <option value="guitar">Guitar</option>
             <option value="piano">Piano</option>
             <option value="both">Both</option>
+          </select>
+        </label>
+
+        <label className="control control--density">
+          <span>Density</span>
+          <select
+            value={layoutDensity}
+            aria-label="Line spacing"
+            onChange={(e) =>
+              onLayoutDensityChange(e.target.value as LayoutDensity)
+            }
+          >
+            <option value="comfortable">Comfortable</option>
+            <option value="compact">Compact</option>
+            <option value="tight">Tight</option>
+          </select>
+        </label>
+
+        <label className="control control--columns">
+          <span>Columns</span>
+          <select
+            value={sheetColumns}
+            aria-label="Columns"
+            onChange={(e) =>
+              onSheetColumnsChange(e.target.value as SheetColumnsPref)
+            }
+          >
+            <option value="auto">Auto</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
           </select>
         </label>
 

@@ -1,35 +1,52 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   addFavorite,
   clampTextScale,
   collectChords,
-  linesPerPageForHeight,
+  fitScaleForOverflow,
+  loadFitToPage,
+  loadKeepSections,
+  loadLayoutDensity,
   loadResolvedViewerPrefs,
+  loadSheetColumnsPref,
   loadSwipeDirection,
   loadTextScale,
   loadViewerColors,
+  packMeasuredBlocks,
+  resolveSheetColumns,
+  saveFitToPage,
+  saveKeepSections,
+  saveLayoutDensity,
+  saveSheetColumnsPref,
   saveSwipeDirection,
   saveTextScale,
   saveViewerColors,
   sheetColorStyle,
   tidyBlocks,
+  trimLeadingEmptyBlocks,
   updateUserSettings,
   upsertSongSettings,
+  FIT_TO_PAGE_DEFAULT,
+  KEEP_SECTIONS_DEFAULT,
+  LAYOUT_DENSITY_DEFAULT,
+  SHEET_COLUMNS_DEFAULT,
   SWIPE_DIRECTION_DEFAULT,
   TEXT_SCALE_DEFAULT,
   getPlaylistWithSongs,
   listFavorites,
-  paginateBlocks,
   removeFavorite,
-  sheetColumnCount,
   transposeParsedSong,
   type ChartInstrument,
+  type LayoutDensity,
+  type ParsedBlock,
   type ParsedSong,
   type PlaylistDetail,
   type PlaylistFavorite,
   type SheetColors,
+  type SheetColumnsPref,
   type SongStatus,
   type SwipeDirection,
+  type UserSettingsPatch,
   type UserSettingsRow,
   type ViewMode,
 } from '#/lib/songbook'
@@ -75,12 +92,23 @@ export function SongViewer({
   const [charts, setCharts] = useState<ChartInstrument>('off')
   const [page, setPage] = useState(0)
   const [textScale, setTextScale] = useState(TEXT_SCALE_DEFAULT)
+  const [layoutDensity, setLayoutDensity] = useState<LayoutDensity>(
+    LAYOUT_DENSITY_DEFAULT,
+  )
+  const [sheetColumns, setSheetColumns] = useState<SheetColumnsPref>(
+    SHEET_COLUMNS_DEFAULT,
+  )
+  const [keepSections, setKeepSections] = useState(KEEP_SECTIONS_DEFAULT)
+  const [fitToPage, setFitToPage] = useState(FIT_TO_PAGE_DEFAULT)
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(
     SWIPE_DIRECTION_DEFAULT,
   )
   const [colorOverride, setColorOverride] = useState<SheetColors>({})
   const [scrollerSize, setScrollerSize] = useState({ width: 390, height: 560 })
+  const [measured, setMeasured] = useState<MeasuredLayout | null>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const probeRef = useRef<HTMLDivElement>(null)
+  const layoutSigRef = useRef('')
   const pageRef = useRef(0)
   const swipeDirectionRef = useRef(swipeDirection)
   const ignoreScrollRef = useRef(false)
@@ -185,11 +213,17 @@ export function SongViewer({
     }
   }, [userId, playlistId, playlistReload])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = scrollerRef.current
     if (!el) return
     const update = () => {
-      setScrollerSize({ width: el.clientWidth, height: el.clientHeight })
+      const width = el.clientWidth
+      const height = el.clientHeight
+      setScrollerSize((prev) =>
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height },
+      )
     }
     update()
     const ro = new ResizeObserver(update)
@@ -211,6 +245,10 @@ export function SongViewer({
       setUserSettings(null)
       setTextScale(loadTextScale())
       setSwipeDirection(loadSwipeDirection())
+      setLayoutDensity(loadLayoutDensity())
+      setSheetColumns(loadSheetColumnsPref())
+      setKeepSections(loadKeepSections())
+      setFitToPage(loadFitToPage())
       return
     }
 
@@ -222,6 +260,10 @@ export function SongViewer({
         setUserSettings(resolved.global)
         setTextScale(resolved.effective.textScale)
         setSwipeDirection(resolved.effective.swipeDirection)
+        setLayoutDensity(resolved.effective.layoutDensity)
+        setSheetColumns(resolved.effective.sheetColumns)
+        setKeepSections(resolved.effective.keepSections)
+        setFitToPage(resolved.effective.fitToPage)
       } catch (err) {
         if (cancelled) return
         setPrefsError(
@@ -229,6 +271,10 @@ export function SongViewer({
         )
         setTextScale(loadTextScale())
         setSwipeDirection(loadSwipeDirection())
+        setLayoutDensity(loadLayoutDensity())
+        setSheetColumns(loadSheetColumnsPref())
+        setKeepSections(loadKeepSections())
+        setFitToPage(loadFitToPage())
       }
     })()
 
@@ -287,6 +333,34 @@ export function SongViewer({
     void persistViewerPref({ swipeDirection: next })
   }
 
+  const persistLayoutPref = async (
+    patch: Pick<
+      UserSettingsPatch,
+      'layoutDensity' | 'sheetColumns' | 'keepSections' | 'fitToPage'
+    >,
+  ) => {
+    if (patch.layoutDensity != null) saveLayoutDensity(patch.layoutDensity)
+    if (patch.sheetColumns != null) saveSheetColumnsPref(patch.sheetColumns)
+    if (patch.keepSections != null) saveKeepSections(patch.keepSections)
+    if (patch.fitToPage != null) saveFitToPage(patch.fitToPage)
+    if (!userId) return
+
+    setPrefsError(null)
+    try {
+      const supabase = createClient()
+      const result = await updateUserSettings(supabase, userId, patch)
+      if (result.error) {
+        setPrefsError(result.error.message)
+        return
+      }
+      if (result.data) setUserSettings(result.data)
+    } catch (err) {
+      setPrefsError(
+        err instanceof Error ? err.message : 'Could not save viewer settings',
+      )
+    }
+  }
+
   const updateColorOverride = (next: SheetColors) => {
     setColorOverride(next)
     saveViewerColors(next)
@@ -306,27 +380,82 @@ export function SongViewer({
     return { ...song, blocks: tidyBlocks(song.blocks) }
   }, [parsed, currentKey])
 
-  const columns = useMemo(
-    () => sheetColumnCount(scrollerSize.width),
-    [scrollerSize.width],
+  const prepared = useMemo(
+    () => trimLeadingEmptyBlocks(transposed.blocks),
+    [transposed.blocks],
   )
 
-  const pageBudget = useMemo(
-    () =>
-      linesPerPageForHeight({
-        scrollerHeightPx: scrollerSize.height,
-        scrollerWidthPx: scrollerSize.width,
-        mode,
-        columns,
-        fontScale: textScale,
-      }),
-    [scrollerSize.height, scrollerSize.width, mode, columns, textScale],
-  )
+  const columns = resolveSheetColumns(sheetColumns, scrollerSize.width)
+  const displayScale = measured?.scale ?? textScale
 
-  const pages = useMemo(
-    () => paginateBlocks(transposed.blocks, pageBudget),
-    [transposed.blocks, pageBudget],
-  )
+  const pages = useMemo(() => {
+    const source = measured?.pages
+    if (!source) return [[prepared]]
+    return source.map((page) =>
+      page.map((column) =>
+        column
+          .map((index) => prepared[index])
+          .filter((block): block is ParsedBlock => block != null),
+      ),
+    )
+  }, [measured, prepared])
+
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current
+    const probe = probeRef.current
+    if (!scroller || !probe) return
+
+    const width = scroller.clientWidth
+    const height = scroller.clientHeight
+    setScrollerSize((prev) =>
+      prev.width === width && prev.height === height ? prev : { width, height },
+    )
+
+    const desired = resolveSheetColumns(sheetColumns, width)
+    const rendered = Number(scroller.dataset.columns)
+    if (rendered !== desired) return
+
+    let cancelled = false
+    const run = () => {
+      if (cancelled) return
+      const next = measureSheetLayout({
+        scroller,
+        probe,
+        blocks: prepared,
+        columns: desired,
+        textScale,
+        keepSectionsTogether: keepSections,
+        fitToPage,
+      })
+      if (!next) return
+      const sig = layoutSignature(next)
+      if (layoutSigRef.current === sig) return
+      layoutSigRef.current = sig
+      setMeasured(next)
+    }
+
+    run()
+    const fonts = document.fonts
+    if (fonts && fonts.status !== 'loaded') {
+      void fonts.ready.then(() => {
+        if (!cancelled) run()
+      })
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    prepared,
+    mode,
+    layoutDensity,
+    sheetColumns,
+    keepSections,
+    fitToPage,
+    textScale,
+    scrollerSize.width,
+    scrollerSize.height,
+  ])
 
   const clearIgnoreScroll = () => {
     if (ignoreScrollTimer.current != null) {
@@ -382,6 +511,20 @@ export function SongViewer({
     )
   }
 
+  const onLayoutDensityChange = (next: LayoutDensity) => {
+    if (next === layoutDensity) return
+    setLayoutDensity(next)
+    goToPage(0, 'instant')
+    void persistLayoutPref({ layoutDensity: next })
+  }
+
+  const onSheetColumnsChange = (next: SheetColumnsPref) => {
+    if (next === sheetColumns) return
+    setSheetColumns(next)
+    goToPage(0, 'instant')
+    void persistLayoutPref({ sheetColumns: next })
+  }
+
   useEffect(() => {
     setPage((p) => {
       const next = Math.min(p, Math.max(0, pages.length - 1))
@@ -427,8 +570,8 @@ export function SongViewer({
   }, [])
 
   const pageChords = useMemo(() => {
-    const block = pages[page] ?? []
-    return collectChords(block)
+    const columnsOnPage = pages[page] ?? []
+    return collectChords(columnsOnPage.flat())
   }, [pages, page])
 
   const onPrint = () => {
@@ -508,7 +651,10 @@ export function SongViewer({
     <div
       className="song-viewer"
       data-fullscreen={fullscreen || undefined}
-      style={sheetColorStyle(effectiveColors)}
+      style={{
+        ...sheetColorStyle(effectiveColors),
+        ['--sheet-scale' as string]: String(textScale),
+      }}
     >
       {fullscreen ? <FullscreenExitButton /> : null}
       {showPlaylist && songId ? (
@@ -562,7 +708,11 @@ export function SongViewer({
         page={page}
         pageCount={pages.length}
         textScale={textScale}
+        layoutDensity={layoutDensity}
+        sheetColumns={sheetColumns}
         onTextScaleChange={onTextScaleChange}
+        onLayoutDensityChange={onLayoutDensityChange}
+        onSheetColumnsChange={onSheetColumnsChange}
         colors={{
           author: authorColors,
           override: colorOverride,
@@ -650,14 +800,15 @@ export function SongViewer({
         ]
           .filter(Boolean)
           .join(' ')}
+        style={{ ['--sheet-scale' as string]: String(displayScale) }}
       >
         <div
           ref={scrollerRef}
           className={
             verticalSwipe ? 'page-scroller page-scroller--vertical' : 'page-scroller'
           }
+          data-columns={columns}
           aria-label="Song pages"
-          style={{ ['--sheet-scale' as string]: String(textScale) }}
         >
           {pages.map((blocks, i) => (
             <section
@@ -682,10 +833,35 @@ export function SongViewer({
                     </p>
                   </div>
                 )}
-                <SongSheet blocks={blocks} mode={mode} columns={columns} />
+                <div
+                  className={
+                    columns === 2
+                      ? 'song-columns song-columns--two'
+                      : 'song-columns'
+                  }
+                >
+                  {blocks.map((column, ci) => (
+                    <div key={ci} className="song-column">
+                      <SongSheet
+                        blocks={column}
+                        mode={mode}
+                        density={layoutDensity}
+                        prepared
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </section>
           ))}
+        </div>
+        <div ref={probeRef} className="song-sheet-probe" aria-hidden="true">
+          <SongSheet
+            blocks={prepared}
+            mode={mode}
+            density={layoutDensity}
+            prepared
+          />
         </div>
         <div
           className={
@@ -719,8 +895,153 @@ export function SongViewer({
             instrument={charts}
           />
         )}
-        <SongSheet blocks={transposed.blocks} mode={mode} columns={2} />
+        <SongSheet
+          blocks={prepared}
+          mode={mode}
+          columns={2}
+          density={layoutDensity}
+          prepared
+        />
       </div>
     </div>
   )
+}
+
+type MeasuredLayout = {
+  pages: number[][][]
+  columns: 1 | 2
+  scale: number
+}
+
+function cssLengthToPx(raw: string, el: HTMLElement): number {
+  const value = raw.trim()
+  if (!value) return 0
+  if (value.endsWith('px')) return parseFloat(value) || 0
+  if (value.endsWith('rem')) {
+    const rem =
+      parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+    return (parseFloat(value) || 0) * rem
+  }
+  if (value.endsWith('em')) {
+    const em = parseFloat(getComputedStyle(el).fontSize) || 16
+    return (parseFloat(value) || 0) * em
+  }
+  const n = parseFloat(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+function readBlockHeights(root: HTMLElement, count: number): number[] {
+  const heights = new Array<number>(count).fill(0)
+  const ordered = [...root.querySelectorAll<HTMLElement>('[data-block-index]')]
+    .map((node) => {
+      const index = Number(node.dataset.blockIndex)
+      const rect = node.getBoundingClientRect()
+      const marginBottom = parseFloat(getComputedStyle(node).marginBottom) || 0
+      return { index, top: rect.top, height: rect.height, marginBottom }
+    })
+    .filter(
+      (node) =>
+        Number.isInteger(node.index) &&
+        node.index >= 0 &&
+        node.index < count,
+    )
+    .sort((a, b) => a.index - b.index)
+
+  for (let i = 0; i < ordered.length; i += 1) {
+    const current = ordered[i]!
+    const next = ordered[i + 1]
+    heights[current.index] = next
+      ? Math.max(0, next.top - current.top)
+      : current.height + current.marginBottom
+  }
+  return heights
+}
+
+function layoutSignature(layout: MeasuredLayout): string {
+  const body = layout.pages
+    .map((page) => page.map((column) => column.join('.')).join('|'))
+    .join('/')
+  return `${layout.columns}:${layout.scale}:${body}`
+}
+
+function measureBlockHeights(
+  probe: HTMLElement,
+  scale: number,
+  width: number,
+  count: number,
+): number[] {
+  probe.style.width = `${Math.round(width)}px`
+  probe.style.setProperty('--sheet-scale', String(scale))
+  void probe.offsetHeight
+  return readBlockHeights(probe, count)
+}
+
+function measureSheetLayout(input: {
+  scroller: HTMLElement
+  probe: HTMLElement
+  blocks: ParsedBlock[]
+  columns: 1 | 2
+  textScale: number
+  keepSectionsTogether: boolean
+  fitToPage: boolean
+}): MeasuredLayout | null {
+  const inner = input.scroller.querySelector<HTMLElement>('.song-page__inner')
+  const columnEl = input.scroller.querySelector<HTMLElement>('.song-column')
+  if (!inner || !columnEl) return null
+
+  const colWidth = columnEl.clientWidth
+  if (colWidth < 40) return null
+
+  const style = getComputedStyle(inner)
+  const padBottom = parseFloat(style.paddingBottom) || 0
+  const continuedTop = cssLengthToPx(
+    style.getPropertyValue('--inner-pad-continued'),
+    inner,
+  )
+  // One pixel of slack so subpixel rounding does not clip the last line.
+  const columnHeight = Math.floor(
+    inner.clientHeight - continuedTop - padBottom - 1,
+  )
+  if (columnHeight < 40) return null
+
+  const pack = (heights: number[]) =>
+    packMeasuredBlocks(input.blocks, heights, {
+      columnHeight,
+      columns: input.columns,
+      keepSectionsTogether: input.keepSectionsTogether,
+    })
+
+  const heights = measureBlockHeights(
+    input.probe,
+    input.textScale,
+    colWidth,
+    input.blocks.length,
+  )
+  let pages = pack(heights)
+  let scale = input.textScale
+
+  if (input.fitToPage && pages.length > 1) {
+    const total = heights.reduce((sum, height) => sum + height, 0)
+    const target = fitScaleForOverflow(
+      input.textScale,
+      total,
+      columnHeight * input.columns,
+    )
+    if (target != null) {
+      const fitted = pack(
+        measureBlockHeights(
+          input.probe,
+          target,
+          colWidth,
+          input.blocks.length,
+        ),
+      )
+      if (fitted.length <= 1) {
+        pages = fitted
+        scale = target
+      }
+    }
+  }
+
+  return { pages, columns: input.columns, scale }
 }
