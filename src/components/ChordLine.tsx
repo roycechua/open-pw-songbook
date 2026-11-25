@@ -3,11 +3,18 @@ import { lineHasContent, type SongLine, type ViewMode } from '#/lib/songbook'
 type Props = {
   line: SongLine
   mode: ViewMode
+  blockIndex: number
 }
 
-export function ChordLine({ line, mode }: Props) {
+export function ChordLine({ line, mode, blockIndex }: Props) {
   if (!lineHasContent(line)) {
-    return <div className="song-line song-line--blank" aria-hidden="true" />
+    return (
+      <div
+        data-block-index={blockIndex}
+        className="song-line song-line--blank"
+        aria-hidden="true"
+      />
+    )
   }
 
   const chordsOnly: string[] = []
@@ -39,13 +46,17 @@ export function ChordLine({ line, mode }: Props) {
   if (mode === 'lyrics') {
     // Instrumental/chord-only lines carry no lyrics; drop them so lyrics
     // mode stays compact instead of leaving empty rows.
-    if (isChordOnly) return null
+    if (isChordOnly) {
+      return (
+        <div data-block-index={blockIndex} className="song-line song-line--skip" />
+      )
+    }
     const text = line.tokens
       .filter((t) => t.kind === 'lyric')
       .map((t) => (t.kind === 'lyric' ? t.text : ''))
       .join('')
     return (
-      <div className="song-line song-line--lyrics">
+      <div data-block-index={blockIndex} className="song-line song-line--lyrics">
         <span className="lyric-text">{text || '\u00a0'}</span>
       </div>
     )
@@ -53,7 +64,10 @@ export function ChordLine({ line, mode }: Props) {
 
   if (isChordOnly) {
     return (
-      <div className="song-line song-line--chords-only">
+      <div
+        data-block-index={blockIndex}
+        className="song-line song-line--chords-only"
+      >
         {chordsOnly.map((chord, i) => (
           <span key={i} className="chord-text">
             {chord}
@@ -64,7 +78,7 @@ export function ChordLine({ line, mode }: Props) {
   }
 
   return (
-    <div className="song-line song-line--chords">
+    <div data-block-index={blockIndex} className="song-line song-line--chords">
       {lyricsParts.map((part, i) => (
         <span key={i} className="chord-lyric-pair">
           <span className="chord-text" aria-hidden={!part.chord}>
