@@ -494,31 +494,7 @@ input {
   cursor: not-allowed;
 }
 
-.app-nav__icon-btn {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.app-nav__icon-btn:hover {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-/* —— Fullscreen mode: top bar hidden, a floating button brings it back —— */
-.app-chrome[data-fullscreen] .app-header,
-.app-chrome[data-fullscreen] .verify-banner,
-.app-chrome[data-fullscreen] .app-chrome__flash,
+/* Full screen is only offered on the song view. It hides that toolbar. */
 .song-viewer[data-fullscreen] .viewer-toolbar {
   display: none;
 }
