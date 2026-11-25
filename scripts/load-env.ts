@@ -28,7 +28,7 @@ export function required(name: string) {
   return value
 }
 
-/** Prod URL in CI (`SUPABASE_URL`); local `.env` uses `VITE_SUPABASE_URL`. */
+/** Prod URL in CI (`SUPABASE_URL`); a local env file uses `VITE_SUPABASE_URL`. */
 export function supabaseUrl() {
   const value = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim()
   if (!value) throw new Error('SUPABASE_URL or VITE_SUPABASE_URL is not set.')

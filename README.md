@@ -62,11 +62,9 @@ Recommended bucket name: **`open-pw-songbook-backups`**.
 
 ### Setup: local env
 
-Add the R2 values to gitignored `.env` (or pass `--file=`). `VITE_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` must be from the **same** project you intend to copy.
+Pass the gitignored env file. `VITE_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` must be from the same project you intend to copy. GitHub Actions does not use this file; it injects repository secrets and runs `npm run backup` with no `--file`.
 
 ```bash
-npm run backup
-# or
 npm run backup -- --file=.env.production.local
 ```
 
@@ -94,7 +92,7 @@ Automation: [`.github/workflows/backup-songbook.yml`](.github/workflows/backup-s
 ### Restore
 
 ```bash
-npm run restore -- --file=.env --yes
+npm run restore -- --file=.env.production.local --yes
 ```
 
 This upserts `latest/` into the Supabase project in that env file. Practice against a non-prod project before you need it.
